@@ -1,0 +1,249 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Chonburi', 'Alfa Slab One', serif;
+  --font-script: 'Pinyon Script', cursive;
+  --font-serif: 'Playfair Display', 'Lora', serif;
+  --font-typewriter: 'Special Elite', 'Courier Prime', monospace;
+  --font-body: 'DM Sans', 'Lora', sans-serif;
+
+  --color-plum: #5E1250;
+  --color-magenta: #8A1F6E;
+  --color-plum-dark: #3F0A35;
+  --color-kraft: #A98258;
+  --color-kraft-dark: #8B6A47;
+  --color-cream: #F3E6CE;
+  --color-cream-light: #FFF6E5;
+  --color-ink: #2A1A14;
+  --color-stamp-red: #8E2A2A;
+  --color-stamp-olive: #5B7A3A;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-plum);
+    color: var(--color-ink);
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  .font-serif-flourish {
+    font-family: var(--font-serif);
+  }
+
+  code, pre, .font-typewriter {
+    font-family: var(--font-typewriter);
+  }
+}
+
+/* Duotone City Facade Background & Texture */
+.city-bg {
+  background-color: #5E1250;
+  background-image:
+    /* Top light-ray subtle sweep */
+    radial-gradient(ellipse at 50% 0%, rgba(255, 246, 229, 0.15) 0%, transparent 60%),
+    /* Plum to magenta deep gradient */
+    radial-gradient(circle at 80% 20%, rgba(138, 31, 110, 0.85) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(63, 10, 53, 0.95) 0%, transparent 60%),
+    linear-gradient(180deg, #6B155B 0%, #5E1250 50%, #460B3B 100%);
+}
+
+/* City Buildings Facade Silhouette Overlay */
+.city-facade {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='260' viewBox='0 0 400 260'%3E%3Cdefs%3E%3Cpattern id='windows' width='16' height='24' patternUnits='userSpaceOnUse'%3E%3Crect x='3' y='4' width='7' height='12' fill='%23FFF6E5' opacity='0.08'/%3E%3C/pattern%3E%3C/defs%3E%3Crect x='10' y='60' width='60' height='200' fill='%2338072B' opacity='0.45'/%3E%3Crect x='10' y='60' width='60' height='200' fill='url(%23windows)'/%3E%3Crect x='80' y='30' width='80' height='230' fill='%23460A38' opacity='0.5'/%3E%3Crect x='80' y='30' width='80' height='230' fill='url(%23windows)'/%3E%3Cpolygon points='120,5 125,30 115,30' fill='%23460A38' opacity='0.6'/%3E%3Crect x='170' y='90' width='70' height='170' fill='%2338072B' opacity='0.4'/%3E%3Crect x='170' y='90' width='70' height='170' fill='url(%23windows)'/%3E%3Crect x='250' y='45' width='75' height='215' fill='%23460A38' opacity='0.55'/%3E%3Crect x='250' y='45' width='75' height='215' fill='url(%23windows)'/%3E%3Crect x='335' y='80' width='65' height='180' fill='%2338072B' opacity='0.45'/%3E%3Crect x='335' y='80' width='65' height='180' fill='url(%23windows)'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: bottom;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Vintage Paper & Ink Grain */
+.paper-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.045'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Cream outline and hard shadow display font effect (like reference "07.00 PM") */
+.text-retro-outline {
+  color: #2A1A14;
+  text-shadow:
+    -2px -2px 0 #FFF6E5,
+     2px -2px 0 #FFF6E5,
+    -2px  2px 0 #FFF6E5,
+     2px  2px 0 #FFF6E5,
+    -3px  0px 0 #FFF6E5,
+     3px  0px 0 #FFF6E5,
+     0px -3px 0 #FFF6E5,
+     0px  3px 0 #FFF6E5,
+     4px  5px 0px rgba(42, 26, 20, 0.95);
+}
+
+.text-retro-outline-plum {
+  color: #FFF6E5;
+  text-shadow:
+    -2px -2px 0 #2A1A14,
+     2px -2px 0 #2A1A14,
+    -2px  2px 0 #2A1A14,
+     2px  2px 0 #2A1A14,
+     4px  5px 0px rgba(0, 0, 0, 0.7);
+}
+
+/* Postage stamp serrated border */
+.stamp-border {
+  background:
+    radial-gradient(circle at top left, transparent 8px, #F3E6CE 8.5px),
+    radial-gradient(circle at top right, transparent 8px, #F3E6CE 8.5px),
+    radial-gradient(circle at bottom left, transparent 8px, #F3E6CE 8.5px),
+    radial-gradient(circle at bottom right, transparent 8px, #F3E6CE 8.5px);
+  background-size: 100% 100%;
+}
+
+.stamp-perforations {
+  background-image: radial-gradient(circle, transparent 3px, #F3E6CE 3.5px);
+  background-size: 10px 10px;
+}
+
+/* Postal Rubber Stamp Styling */
+.rubber-stamp {
+  border: 3px double #8E2A2A;
+  color: #8E2A2A;
+  font-family: var(--font-typewriter);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 900;
+  padding: 4px 10px;
+  display: inline-block;
+  transform: rotate(-3deg);
+  box-shadow: inset 0 0 4px rgba(142, 42, 42, 0.2);
+  mask-image: radial-gradient(circle, rgba(0,0,0,1) 85%, rgba(0,0,0,0.6) 100%);
+}
+
+.rubber-stamp-green {
+  border: 3px double #5B7A3A;
+  color: #5B7A3A;
+  font-family: var(--font-typewriter);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 900;
+  padding: 4px 10px;
+  display: inline-block;
+  transform: rotate(4deg);
+}
+
+.rubber-stamp-ink {
+  border: 2px solid #2A1A14;
+  color: #2A1A14;
+  font-family: var(--font-typewriter);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  padding: 3px 8px;
+  display: inline-block;
+}
+
+/* Button with Rubber-Stamp Press Effect */
+.btn-postal-kraft {
+  background-color: #A98258;
+  color: #FFF6E5;
+  border: 2.5px solid #2A1A14;
+  box-shadow: 4px 4px 0px #2A1A14;
+  font-family: var(--font-typewriter);
+  font-weight: 700;
+  transition: all 0.12s ease-out;
+}
+.btn-postal-kraft:hover {
+  background-color: #B58E62;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #2A1A14;
+}
+.btn-postal-kraft:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #2A1A14;
+}
+
+.btn-postal-cream {
+  background-color: #F3E6CE;
+  color: #2A1A14;
+  border: 2.5px solid #2A1A14;
+  box-shadow: 4px 4px 0px #2A1A14;
+  font-family: var(--font-typewriter);
+  font-weight: 700;
+  transition: all 0.12s ease-out;
+}
+.btn-postal-cream:hover {
+  background-color: #FFF6E5;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #2A1A14;
+}
+.btn-postal-cream:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #2A1A14;
+}
+
+.btn-postal-red {
+  background-color: #8E2A2A;
+  color: #FFF6E5;
+  border: 2.5px solid #2A1A14;
+  box-shadow: 4px 4px 0px #2A1A14;
+  font-family: var(--font-typewriter);
+  font-weight: 700;
+  transition: all 0.12s ease-out;
+}
+.btn-postal-red:hover {
+  background-color: #9E3232;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #2A1A14;
+}
+.btn-postal-red:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #2A1A14;
+}
+
+/* Lined letter paper background */
+.lined-paper {
+  background-color: #F3E6CE;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    rgba(42, 26, 20, 0.12) 28px
+  );
+  line-height: 28px;
+}
+
+/* Postal telegram strip */
+.telegram-strip {
+  background-color: #F8EFE0;
+  border-left: 6px dashed #2A1A14;
+  border-right: 6px dashed #2A1A14;
+  font-family: var(--font-typewriter);
+}
+
+/* Stamp slam keyframes */
+@keyframes stamp-thump {
+  0% { transform: scale(2.4) rotate(-12deg); opacity: 0; }
+  60% { transform: scale(0.9) rotate(-3deg); opacity: 1; }
+  80% { transform: scale(1.05) rotate(-2deg); }
+  100% { transform: scale(1) rotate(-3deg); opacity: 1; }
+}
+
+.animate-stamp-thump {
+  animation: stamp-thump 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Envelope flap rotation */
+@keyframes envelope-open {
+  0% { transform: rotateX(0deg); }
+  100% { transform: rotateX(180deg); }
+}
+
+.animate-envelope-open {
+  transform-origin: top center;
+  animation: envelope-open 0.6s ease-in-out forwards;
+}
