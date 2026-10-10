@@ -20,7 +20,7 @@ Managing campus events, cultural festivals, and technical symposiums often suffe
 
 ## 🌐 Live Website & Links
 
-* **Live Platform:** [campus-fest-lynj.vercel.app](https://campus-fest-lynj.vercel.app)
+* **Live Platform:** [campus-fest-lynj.vercel.app](https://remix-campus-fest-8372.ai.studio)
 * **GitHub Repository:** [divijacs138978-lang/Campus-fest](https://github.com/divijacs138978-lang/Campus-fest)
 
 ---
