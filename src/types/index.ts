@@ -53,7 +53,8 @@ export interface CampusEvent {
 
 export interface CampusPass {
   id: string;
-  code: string; // CP-XXXX-XXXX
+  code: string; // CF-2026-X7K9P
+  regId?: string;
   eventId: string;
   eventTitle: string;
   eventDate: string;
@@ -104,4 +105,4 @@ export interface CampusFeedback {
   submittedAt: string;
 }
 
-export type ActiveRole = 'landing' | 'student' | 'organizer';
+export type ActiveRole = 'landing' | 'student' | 'organizer' | 'trail';

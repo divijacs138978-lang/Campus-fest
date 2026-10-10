@@ -30,6 +30,8 @@ import { ScannerModal } from './components/ScannerModal';
 import { StoryFeedbackModal } from './components/StoryFeedbackModal';
 import { NewEventModal } from './components/NewEventModal';
 import { CurtainTransition } from './components/CurtainTransition';
+import { ToastContainer, ToastMessage } from './components/Toast';
+import { CampusTrailMap } from './components/CampusTrailMap';
 import {
   PostageStamp,
   PointingHand,
@@ -112,6 +114,25 @@ export default function App() {
     event: CampusEvent;
   } | null>(null);
 
+  // Toast notification state
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = (
+    title: string,
+    description?: string,
+    type: 'success' | 'info' | 'reminder' | 'error' = 'success'
+  ) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    setToasts((prev) => [...prev, { id, title, description, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
   // Sync state helper
   const refreshData = () => {
     setEvents(dataService.getEvents());
@@ -154,6 +175,7 @@ export default function App() {
       landing: 'CENTRAL CAMPUS GATE',
       student: 'STUDENT NOTICE BOARD',
       organizer: 'ORGANIZER DESK',
+      trail: 'CAMPUS TRAIL ROAD MAP',
     };
 
     setCurtainTargetTitle(titles[nextRole]);
@@ -180,6 +202,11 @@ export default function App() {
     refreshData();
     setRegisteringEvent(null);
     setCelebrationPass(newPass);
+    showToast(
+      '★ Registration Stamped & Confirmed!',
+      `Pass ${newPass.code} generated for ${newPass.studentName}.`,
+      'success'
+    );
   };
 
   // Save Event (Create or Edit)
@@ -292,6 +319,17 @@ export default function App() {
                     </button>
                     <PointingHand direction="left" className="w-12 h-6" />
                   </div>
+
+                  {/* Option 3: Campus Trail Map */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => switchRoleWithCurtain('trail')}
+                      className="btn-postal-kraft px-7 py-4 rounded-2xl text-xs uppercase font-bold tracking-wider shadow-[4px_4px_0px_#2A1A14] flex items-center gap-2"
+                    >
+                      <Compass className="w-4 h-4 text-[#FFF6E5]" />
+                      <span>Campus Trail Map ★</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Postage Stamps Bar at Bottom of Envelope */}
@@ -403,6 +441,7 @@ export default function App() {
                       onOpenDetails={() => setInspectingEvent(ev)}
                       onQuickRegister={() => setRegisteringEvent(ev)}
                       rotation={rotations[idx % rotations.length]}
+                      onShowToast={showToast}
                     />
                   );
                 })}
@@ -424,6 +463,8 @@ export default function App() {
             onQuickRegister={(ev) => setRegisteringEvent(ev)}
             onOpenFeedback={(pass, event) => setFeedbackSession({ pass, event })}
             onUpdatePassTemplate={handleUpdatePassTemplate}
+            onShowToast={showToast}
+            onOpenTrail={() => switchRoleWithCurtain('trail')}
           />
         )}
 
@@ -453,6 +494,17 @@ export default function App() {
               setEditingEvent(event);
               setShowNewEventModal(true);
             }}
+          />
+        )}
+
+        {/* ========================================================
+            VIEW: CAMPUS TRAIL ROAD MAP (VERTICAL SVG INTERACTIVE)
+        ======================================================== */}
+        {activeRole === 'trail' && (
+          <CampusTrailMap
+            events={events}
+            onSelectEvent={(ev) => setInspectingEvent(ev)}
+            onClose={() => switchRoleWithCurtain('landing')}
           />
         )}
       </main>
@@ -497,6 +549,7 @@ export default function App() {
             setActiveRole('student');
             setStudentTab('passes');
           }}
+          onShowToast={showToast}
         />
       )}
 
@@ -535,6 +588,9 @@ export default function App() {
           onSaveEvent={handleSaveEvent}
         />
       )}
+
+      {/* Toast Notification Container */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

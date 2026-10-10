@@ -30,9 +30,8 @@ export function generateEntryCode(existingCodes: Set<string>): string {
   let code = '';
   let attempts = 0;
   do {
-    const p1 = Array.from({ length: 4 }, () => SAFE_CHARS[Math.floor(Math.random() * SAFE_CHARS.length)]).join('');
-    const p2 = Array.from({ length: 4 }, () => SAFE_CHARS[Math.floor(Math.random() * SAFE_CHARS.length)]).join('');
-    code = `CP-${p1}-${p2}`;
+    const p1 = Array.from({ length: 5 }, () => SAFE_CHARS[Math.floor(Math.random() * SAFE_CHARS.length)]).join('');
+    code = `CF-2026-${p1}`;
     attempts++;
   } while (existingCodes.has(code) && attempts < 100);
   return code;
@@ -600,6 +599,7 @@ class CampusDataService {
     const newPass: CampusPass = {
       id: `pass-${Date.now()}`,
       code,
+      regId: code,
       eventId: event.id,
       eventTitle: event.title,
       eventDate: event.date,
@@ -687,7 +687,13 @@ class CampusDataService {
     const cleanCode = code.trim().toUpperCase();
     const timeNow = new Date().toLocaleTimeString();
 
-    const targetPass = this.passes.find((p) => p.code === cleanCode);
+    const targetPass = this.passes.find(
+      (p) =>
+        p.code.toUpperCase() === cleanCode ||
+        (p.regId && p.regId.toUpperCase() === cleanCode) ||
+        p.id.toUpperCase() === cleanCode ||
+        p.code.replace(/-/g, '').toUpperCase() === cleanCode.replace(/-/g, '')
+    );
 
     if (!targetPass) {
       const invalidScan: ScanRecord = {

@@ -95,7 +95,7 @@ export const CityPosterPass: React.FC<Props> = ({ pass, className = '' }) => {
           {/* QR inside circular postmark container */}
           <div className="shrink-0 relative p-1.5 rounded-2xl bg-[#F3E6CE] border-2 border-[#2A1A14] shadow-[3px_3px_0px_#2A1A14]">
             <QRCodeDisplay
-              text={JSON.stringify({ code: pass.code, eventId: pass.eventId })}
+              text={JSON.stringify({ regId: pass.code, eventId: pass.eventId, email: pass.studentEmail })}
               size={76}
               fgColor="#2A1A14"
               bgColor="#F3E6CE"

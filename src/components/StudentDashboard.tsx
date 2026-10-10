@@ -30,6 +30,8 @@ interface Props {
   onQuickRegister: (event: CampusEvent) => void;
   onOpenFeedback: (pass: CampusPass, event: CampusEvent) => void;
   onUpdatePassTemplate: (passId: string, template: any) => void;
+  onShowToast?: (title: string, desc?: string, type?: 'success' | 'reminder') => void;
+  onOpenTrail?: () => void;
 }
 
 export const StudentDashboard: React.FC<Props> = ({
@@ -41,6 +43,8 @@ export const StudentDashboard: React.FC<Props> = ({
   onQuickRegister,
   onOpenFeedback,
   onUpdatePassTemplate,
+  onShowToast,
+  onOpenTrail,
 }) => {
   const [activeTab, setActiveTab] = useState<'board' | 'passes' | 'profile'>('board');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
@@ -143,6 +147,17 @@ export const StudentDashboard: React.FC<Props> = ({
             <User className="w-4 h-4" />
             <span>ID Profile</span>
           </button>
+
+          {onOpenTrail && (
+            <button
+              onClick={onOpenTrail}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8E2A2A] text-[#FFF6E5] font-black hover:bg-[#5E1250] transition-all border border-[#2A1A14]"
+              title="Open interactive campus trail road map"
+            >
+              <Compass className="w-4 h-4" />
+              <span>Campus Trail ★</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -195,6 +210,7 @@ export const StudentDashboard: React.FC<Props> = ({
                   onOpenDetails={() => onSelectEvent(ev)}
                   onQuickRegister={() => onQuickRegister(ev)}
                   rotation={rotations[idx % rotations.length]}
+                  onShowToast={onShowToast}
                 />
               );
             })}

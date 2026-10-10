@@ -1,12 +1,33 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { CampusEvent } from '../types';
 import {
   PostageStamp,
   PaperClip,
   ImportantStamp,
 } from './PostalDecorations';
-import { ArrowRight, CheckCircle2, MapPin, Calendar, Users, ShieldCheck } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  MapPin,
+  Calendar,
+  Users,
+  ShieldCheck,
+  Bell,
+  BellRing,
+  Download,
+  CalendarPlus,
+  ExternalLink,
+} from 'lucide-react';
+import { getEvent3DAsset } from '../assets/images';
+import {
+  isReminderSet,
+  toggleEventReminder,
+  downloadEventICS,
+  getGoogleCalendarUrl,
+  requestAndSendNotification,
+} from '../utils/calendarReminder';
+import { postalSoundFx } from '../utils/audio';
 
 interface Props {
   event: CampusEvent;
@@ -14,6 +35,7 @@ interface Props {
   onOpenDetails: () => void;
   onQuickRegister: () => void;
   rotation?: string;
+  onShowToast?: (title: string, desc?: string, type?: 'success' | 'reminder') => void;
 }
 
 export const EnvelopeEventCard: React.FC<Props> = ({
@@ -22,7 +44,11 @@ export const EnvelopeEventCard: React.FC<Props> = ({
   onOpenDetails,
   onQuickRegister,
   rotation = 'rotate-0',
+  onShowToast,
 }) => {
+  const [hasReminder, setHasReminder] = useState(() => isReminderSet(event.id));
+  const [showReminderMenu, setShowReminderMenu] = useState(false);
+
   const isFull = event.status === 'FULL' || event.registeredCount >= event.capacity;
   const isLive = event.status === 'LIVE';
   const spotsLeft = Math.max(0, event.capacity - event.registeredCount);
@@ -31,9 +57,53 @@ export const EnvelopeEventCard: React.FC<Props> = ({
     Math.round((event.registeredCount / event.capacity) * 100)
   );
 
+  const asset3D = getEvent3DAsset(event.category, event.title);
+
+  const handleToggleReminder = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    postalSoundFx.playTypewriterTick();
+    const nextState = toggleEventReminder(event.id);
+    setHasReminder(nextState);
+
+    if (nextState) {
+      await requestAndSendNotification(event);
+      onShowToast?.(
+        '★ Reminder Activated',
+        `Alert scheduled for ${event.title}`,
+        'reminder'
+      );
+    } else {
+      onShowToast?.(
+        'Reminder Removed',
+        `Notification disabled for ${event.title}`,
+        'reminder'
+      );
+    }
+  };
+
+  const handleDownloadICS = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    postalSoundFx.playStampThump();
+    downloadEventICS(event);
+    setShowReminderMenu(false);
+    onShowToast?.(
+      '★ Calendar Event Exported',
+      `.ics file downloaded for ${event.title}`,
+      'success'
+    );
+  };
+
+  const handleOpenGoogleCalendar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowReminderMenu(false);
+    const url = getGoogleCalendarUrl(event);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <motion.div
       whileHover={{ scale: 1.015, y: -5 }}
+      whileTap={{ scale: 0.995 }}
       onClick={onOpenDetails}
       className={`relative cursor-pointer select-none rounded-[30px] p-2 bg-[#A98258] border-[3px] border-[#2A1A14] shadow-[6px_6px_0px_#2A1A14] transition-all ${rotation}`}
     >
@@ -69,28 +139,110 @@ export const EnvelopeEventCard: React.FC<Props> = ({
 
       {/* Notice Board Cream Poster Sheet */}
       <div className="bg-[#F3E6CE] border-2 border-[#2A1A14] rounded-b-[26px] p-5 sm:p-6 space-y-4">
-        {/* Date, Time & Category Badge */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="bg-[#8A1F6E] text-[#FFF6E5] px-2 py-0.5 font-typewriter text-[10px] font-black uppercase rounded shadow-[1px_1px_0px_#2A1A14]">
-            {event.dayLabel || 'CAMPUS'}
-          </span>
-          <span className="font-typewriter text-xs font-bold text-[#2A1A14]">
-            {event.time}
-          </span>
-          <span className="text-[#2A1A14]/40 font-typewriter text-xs">·</span>
-          <span className="font-typewriter text-xs font-bold text-[#8E2A2A]">
-            {event.date}
-          </span>
+        {/* Date, Time & Category Badge + Reminder Toggle */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="bg-[#8A1F6E] text-[#FFF6E5] px-2 py-0.5 font-typewriter text-[10px] font-black uppercase rounded shadow-[1px_1px_0px_#2A1A14]">
+              {event.dayLabel || 'CAMPUS'}
+            </span>
+            <span className="font-typewriter text-xs font-bold text-[#2A1A14]">
+              {event.time}
+            </span>
+            <span className="text-[#2A1A14]/40 font-typewriter text-xs">·</span>
+            <span className="font-typewriter text-xs font-bold text-[#8E2A2A]">
+              {event.date}
+            </span>
+          </div>
+
+          {/* Set Reminder Button / Dropdown */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowReminderMenu(!showReminderMenu);
+              }}
+              className={`p-1.5 rounded-xl border-2 border-[#2A1A14] flex items-center gap-1 font-typewriter text-[10px] font-bold shadow-[2px_2px_0px_#2A1A14] transition-all ${
+                hasReminder
+                  ? 'bg-[#8E2A2A] text-[#FFF6E5]'
+                  : 'bg-[#FFF6E5] text-[#2A1A14] hover:bg-[#F3E6CE]'
+              }`}
+              title={hasReminder ? 'Reminder is Active' : 'Set Event Reminder'}
+            >
+              {hasReminder ? (
+                <BellRing className="w-3.5 h-3.5 animate-bounce" />
+              ) : (
+                <Bell className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {hasReminder ? 'REMINDED' : 'REMIND'}
+              </span>
+            </button>
+
+            {/* Reminder Dropdown Menu */}
+            <AnimatePresence>
+              {showReminderMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-1.5 w-52 bg-[#F3E6CE] border-2 border-[#2A1A14] rounded-xl p-2 shadow-[4px_4px_0px_#2A1A14] z-30 font-typewriter text-xs space-y-1"
+                >
+                  <button
+                    onClick={handleToggleReminder}
+                    className="w-full text-left p-1.5 rounded-lg hover:bg-[#A98258] hover:text-[#FFF6E5] flex items-center justify-between transition-colors font-bold"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Bell className="w-3.5 h-3.5 text-[#8E2A2A]" />
+                      <span>{hasReminder ? 'Disable Alert' : 'Enable Web Alert'}</span>
+                    </span>
+                    <span className="text-[10px] opacity-75">{hasReminder ? 'ON' : 'OFF'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadICS}
+                    className="w-full text-left p-1.5 rounded-lg hover:bg-[#A98258] hover:text-[#FFF6E5] flex items-center gap-1.5 transition-colors font-bold"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#5B7A3A]" />
+                    <span>Export iCal (.ics)</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenGoogleCalendar}
+                    className="w-full text-left p-1.5 rounded-lg hover:bg-[#A98258] hover:text-[#FFF6E5] flex items-center gap-1.5 transition-colors font-bold"
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5 text-[#8A1F6E]" />
+                    <span>Google Calendar</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
-        {/* Title & Description */}
-        <div>
-          <h3 className="font-display font-black text-2xl text-[#2A1A14] uppercase leading-tight tracking-tight">
-            {event.title}
-          </h3>
-          <p className="font-serif-flourish italic text-sm text-[#2A1A14]/85 mt-1 line-clamp-2">
-            {event.description}
-          </p>
+        {/* Title, Description & 3D Asset Emblem */}
+        <div className="flex items-start gap-3.5">
+          <div className="flex-1">
+            <h3 className="font-display font-black text-2xl text-[#2A1A14] uppercase leading-tight tracking-tight">
+              {event.title}
+            </h3>
+            <p className="font-serif-flourish italic text-sm text-[#2A1A14]/85 mt-1 line-clamp-2">
+              {event.description}
+            </p>
+          </div>
+
+          {/* 3D Visual Artwork Frame */}
+          <div className="relative shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-[#2A1A14] shadow-[3px_3px_0px_#2A1A14] overflow-hidden bg-black/80 group">
+            <img
+              src={asset3D}
+              alt={event.category}
+              className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+            <span className="absolute bottom-1 right-1 font-typewriter text-[8px] font-black text-[#FFF6E5] bg-[#2A1A14]/80 px-1 rounded uppercase">
+              3D
+            </span>
+          </div>
         </div>
 
         {/* Venue & Organizer Details */}

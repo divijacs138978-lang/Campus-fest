@@ -247,3 +247,19 @@
   transform-origin: top center;
   animation: envelope-open 0.6s ease-in-out forwards;
 }
+
+/* Road walking trail dash animation */
+@keyframes dashwalk {
+  0% {
+    stroke-dashoffset: 40;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[dashwalk_2s_linear_infinite\] {
+    animation: none !important;
+  }
+}

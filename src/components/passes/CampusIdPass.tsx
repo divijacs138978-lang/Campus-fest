@@ -96,7 +96,7 @@ export const CampusIdPass: React.FC<Props> = ({ pass, className = '' }) => {
 
             <div className="shrink-0 bg-white p-2 rounded-xl border-2 border-[#2A1A14] shadow-[2px_2px_0px_#2A1A14]">
               <QRCodeDisplay
-                text={JSON.stringify({ code: pass.code, eventId: pass.eventId })}
+                text={JSON.stringify({ regId: pass.code, eventId: pass.eventId, email: pass.studentEmail })}
                 size={80}
                 fgColor="#2A1A14"
                 bgColor="#FFFFFF"

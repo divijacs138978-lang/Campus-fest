@@ -94,7 +94,7 @@ export async function downloadPassAsPNG(pass: CampusPass, format: '9:16' | '1:1'
   // QR Code Generation
   try {
     const qrDataUrl = await QRCode.toDataURL(
-      JSON.stringify({ code: pass.code, eventId: pass.eventId }),
+      JSON.stringify({ regId: pass.code, eventId: pass.eventId, email: pass.studentEmail }),
       {
         margin: 1,
         width: 280,

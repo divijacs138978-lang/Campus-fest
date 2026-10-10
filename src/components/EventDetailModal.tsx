@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { CampusEvent, StudentProfile } from '../types';
 import {
@@ -6,7 +6,30 @@ import {
   ImportantStamp,
   PaperClip,
 } from './PostalDecorations';
-import { X, Calendar, MapPin, ArrowRight, CheckCircle2, AlertTriangle, Users, Mail, ShieldCheck } from 'lucide-react';
+import {
+  X,
+  Calendar,
+  MapPin,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  Users,
+  Mail,
+  ShieldCheck,
+  Bell,
+  BellRing,
+  Download,
+  CalendarPlus,
+} from 'lucide-react';
+import { getEvent3DAsset } from '../assets/images';
+import {
+  isReminderSet,
+  toggleEventReminder,
+  downloadEventICS,
+  getGoogleCalendarUrl,
+  requestAndSendNotification,
+} from '../utils/calendarReminder';
+import { postalSoundFx } from '../utils/audio';
 
 interface Props {
   event: CampusEvent;
@@ -15,6 +38,7 @@ interface Props {
   onStartRegistration: (event: CampusEvent) => void;
   isRegistered?: boolean;
   onViewPass?: () => void;
+  onShowToast?: (title: string, desc?: string, type?: 'success' | 'reminder') => void;
 }
 
 export const EventDetailModal: React.FC<Props> = ({
@@ -24,9 +48,48 @@ export const EventDetailModal: React.FC<Props> = ({
   onStartRegistration,
   isRegistered = false,
   onViewPass,
+  onShowToast,
 }) => {
+  const [hasReminder, setHasReminder] = useState(() => isReminderSet(event.id));
   const isFull = event.status === 'FULL' || event.registeredCount >= event.capacity;
   const spotsLeft = Math.max(0, event.capacity - event.registeredCount);
+  const asset3D = getEvent3DAsset(event.category, event.title);
+
+  const handleToggleReminder = async () => {
+    postalSoundFx.playTypewriterTick();
+    const nextState = toggleEventReminder(event.id);
+    setHasReminder(nextState);
+
+    if (nextState) {
+      await requestAndSendNotification(event);
+      onShowToast?.(
+        '★ Reminder Set',
+        `Notification alert set for ${event.title}`,
+        'reminder'
+      );
+    } else {
+      onShowToast?.(
+        'Reminder Disabled',
+        `Alert disabled for ${event.title}`,
+        'reminder'
+      );
+    }
+  };
+
+  const handleDownloadICS = () => {
+    postalSoundFx.playStampThump();
+    downloadEventICS(event);
+    onShowToast?.(
+      '★ Calendar File Saved',
+      `.ics file downloaded for ${event.title}`,
+      'success'
+    );
+  };
+
+  const handleGoogleCalendar = () => {
+    const url = getGoogleCalendarUrl(event);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   // Eligibility evaluation
   const isYearEligible =
@@ -57,19 +120,34 @@ export const EventDetailModal: React.FC<Props> = ({
         <div className="bg-[#F3E6CE] border-2 border-[#2A1A14] rounded-[30px] p-6 sm:p-8 overflow-y-auto space-y-6">
           {/* Header */}
           <div className="flex items-start justify-between border-b-2 border-dashed border-[#2A1A14]/30 pb-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-typewriter text-[10px] text-[#8E2A2A] font-black uppercase tracking-widest">
-                  ★ CAMPUS NOTICE // REF #{event.id.replace('ev-', '').toUpperCase()}
+            <div className="flex items-start gap-4">
+              {/* 3D Visual Artwork Frame */}
+              <div className="relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] overflow-hidden bg-black/90">
+                <img
+                  src={asset3D}
+                  alt={event.category}
+                  className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+                <span className="absolute bottom-1 right-1 font-typewriter text-[9px] font-black text-[#FFF6E5] bg-[#2A1A14]/90 px-1 rounded uppercase">
+                  3D
                 </span>
-                <ImportantStamp text={event.category} className="text-[9px]" />
               </div>
-              <h2 className="font-display font-black text-2xl sm:text-3xl text-[#2A1A14] uppercase leading-tight">
-                {event.title}
-              </h2>
-              <p className="font-serif-flourish italic text-sm text-[#2A1A14]/85">
-                Organized by {event.organizerClub}
-              </p>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-typewriter text-[10px] text-[#8E2A2A] font-black uppercase tracking-widest">
+                    ★ CAMPUS NOTICE // REF #{event.id.replace('ev-', '').toUpperCase()}
+                  </span>
+                  <ImportantStamp text={event.category} className="text-[9px]" />
+                </div>
+                <h2 className="font-display font-black text-2xl sm:text-3xl text-[#2A1A14] uppercase leading-tight">
+                  {event.title}
+                </h2>
+                <p className="font-serif-flourish italic text-sm text-[#2A1A14]/85">
+                  Organized by {event.organizerClub}
+                </p>
+              </div>
             </div>
 
             <button
@@ -78,6 +156,48 @@ export const EventDetailModal: React.FC<Props> = ({
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Event Reminders Toolbar */}
+          <div className="p-3 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-2xl shadow-[2px_2px_0px_#2A1A14] flex flex-wrap items-center justify-between gap-3 font-typewriter text-xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[#2A1A14] flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-[#8E2A2A]" />
+                CALENDAR & REMINDER:
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleToggleReminder}
+                className={`px-3 py-1.5 rounded-xl border-2 border-[#2A1A14] text-[11px] font-bold shadow-[2px_2px_0px_#2A1A14] flex items-center gap-1.5 transition-all ${
+                  hasReminder
+                    ? 'bg-[#8E2A2A] text-[#FFF6E5]'
+                    : 'bg-[#F3E6CE] text-[#2A1A14] hover:bg-[#A98258] hover:text-[#FFF6E5]'
+                }`}
+              >
+                {hasReminder ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                <span>{hasReminder ? 'Reminder Active' : 'Set Web Reminder'}</span>
+              </button>
+
+              <button
+                onClick={handleDownloadICS}
+                className="px-3 py-1.5 rounded-xl border-2 border-[#2A1A14] bg-[#F3E6CE] text-[#2A1A14] hover:bg-[#A98258] hover:text-[#FFF6E5] text-[11px] font-bold shadow-[2px_2px_0px_#2A1A14] flex items-center gap-1.5 transition-all"
+                title="Download iCal (.ics) format"
+              >
+                <Download className="w-3.5 h-3.5 text-[#5B7A3A]" />
+                <span>Export .ICS</span>
+              </button>
+
+              <button
+                onClick={handleGoogleCalendar}
+                className="px-3 py-1.5 rounded-xl border-2 border-[#2A1A14] bg-[#F3E6CE] text-[#2A1A14] hover:bg-[#A98258] hover:text-[#FFF6E5] text-[11px] font-bold shadow-[2px_2px_0px_#2A1A14] flex items-center gap-1.5 transition-all"
+                title="Add directly to Google Calendar"
+              >
+                <CalendarPlus className="w-3.5 h-3.5 text-[#8A1F6E]" />
+                <span>Google Cal</span>
+              </button>
+            </div>
           </div>
 
           {/* Date, Time & Venue in Kraft Blocks */}

@@ -111,9 +111,32 @@ export const TopBar: React.FC<Props> = ({
           )}
 
           {activeRole === 'landing' && (
-            <span className="text-[#FFF6E5]/70 font-typewriter text-xs italic">
-              Official University Notice Board & Entry Gate
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-[#FFF6E5]/70 font-typewriter text-xs italic">
+                Official University Notice Board & Entry Gate
+              </span>
+              <button
+                onClick={() => onSwitchRole('trail')}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#8E2A2A] text-[#FFF6E5] border border-[#2A1A14] text-xs font-typewriter font-bold hover:bg-[#A98258] transition-colors"
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>Trail Map</span>
+              </button>
+            </div>
+          )}
+
+          {activeRole === 'trail' && (
+            <div className="flex items-center gap-2 text-[#FFF6E5] font-typewriter text-xs">
+              <span className="bg-[#8E2A2A] text-[#FFF6E5] px-2 py-0.5 rounded border border-[#2A1A14] font-black">
+                CAMPUS TRAIL ROAD MAP
+              </span>
+              <button
+                onClick={() => onSwitchRole('landing')}
+                className="text-[#F3E6CE] hover:underline text-[11px] ml-2"
+              >
+                ← Return to Notice Board
+              </button>
+            </div>
           )}
         </nav>
 
@@ -186,6 +209,22 @@ export const TopBar: React.FC<Props> = ({
                     </div>
                   </div>
                   {activeRole === 'organizer' && <Check className="w-3.5 h-3.5 text-[#5B7A3A]" />}
+                </button>
+
+                <button
+                  onClick={() => onSwitchRole('trail')}
+                  className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-[#A98258]/30 transition-colors ${
+                    activeRole === 'trail' ? 'font-black bg-[#A98258]/20 text-[#8E2A2A]' : 'text-[#2A1A14]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-[#8E2A2A]" />
+                    <div>
+                      <div className="font-bold">Campus Trail Map</div>
+                      <div className="text-[10px] opacity-75">Interactive road-map & navigation</div>
+                    </div>
+                  </div>
+                  {activeRole === 'trail' && <Check className="w-3.5 h-3.5 text-[#5B7A3A]" />}
                 </button>
 
                 <div className="border-t border-[#2A1A14]/20 my-1" />

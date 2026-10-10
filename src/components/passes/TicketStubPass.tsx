@@ -68,7 +68,7 @@ export const TicketStubPass: React.FC<Props> = ({ pass, className = '' }) => {
 
           <div className="bg-white p-2 rounded-xl border-2 border-[#2A1A14] shadow-[2px_2px_0px_#2A1A14]">
             <QRCodeDisplay
-              text={JSON.stringify({ code: pass.code, eventId: pass.eventId })}
+              text={JSON.stringify({ regId: pass.code, eventId: pass.eventId, email: pass.studentEmail })}
               size={84}
               fgColor="#2A1A14"
               bgColor="#FFFFFF"

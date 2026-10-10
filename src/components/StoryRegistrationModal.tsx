@@ -32,20 +32,41 @@ export const StoryRegistrationModal: React.FC<Props> = ({
   const [email, setEmail] = useState(studentProfile?.collegeEmail || '');
   const [rollNumber, setRollNumber] = useState(studentProfile?.rollNumber || '');
   const [department, setDepartment] = useState(studentProfile?.department || 'Computer Science');
-  const [year, setYear] = useState(studentProfile?.year || '3rd Year');
+  const [year, setYear] = useState(studentProfile?.year || '1st Year');
   const [phone, setPhone] = useState(studentProfile?.phone || '');
   const [teamName, setTeamName] = useState('');
   const [tshirtSize, setTshirtSize] = useState('M');
   const [isSealing, setIsSealing] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  // Real-time field validators
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const cleanPhoneDigits = phone.replace(/\D/g, '');
+  const isPhoneValid = cleanPhoneDigits.length === 10;
+  const isNameValid = name.trim().length >= 2;
+  const isRollValid = rollNumber.trim().length >= 2;
 
   const nextStep = () => {
     setErrorMsg('');
     postalSoundFx.playTypewriterTick();
 
     if (step === 0) {
-      if (!name.trim() || !email.trim() || !rollNumber.trim()) {
-        setErrorMsg('Please provide your name, college email, and roll number.');
+      setTouched({ name: true, email: true, rollNumber: true, phone: true });
+      if (!isNameValid) {
+        setErrorMsg('Full Name is required (minimum 2 characters).');
+        return;
+      }
+      if (!isEmailValid) {
+        setErrorMsg('Please enter a valid college email address.');
+        return;
+      }
+      if (!isPhoneValid) {
+        setErrorMsg('Phone Number is required and must be exactly 10 digits.');
+        return;
+      }
+      if (!isRollValid) {
+        setErrorMsg('Roll Number / Enrollment ID is required.');
         return;
       }
     }
@@ -157,75 +178,128 @@ export const StoryRegistrationModal: React.FC<Props> = ({
 
                   <div className="space-y-2.5 pt-1">
                     <div>
-                      <label className="block mb-1 font-bold uppercase">FULL NAME *</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="font-bold uppercase text-[11px]">FULL NAME *</label>
+                        {touched.name && !isNameValid && (
+                          <span className="text-[10px] text-[#8E2A2A] font-bold">Min 2 letters required</span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         required
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          setTouched((prev) => ({ ...prev, name: true }));
+                        }}
                         placeholder="e.g. Aarav Sharma"
-                        className="w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none"
+                        className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
+                          touched.name && !isNameValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
+                        }`}
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-bold uppercase">ROLL NUMBER *</label>
-                        <input
-                          type="text"
-                          required
-                          value={rollNumber}
-                          onChange={(e) => setRollNumber(e.target.value.toUpperCase())}
-                          placeholder="22CS084"
-                          className="w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-black text-[#8E2A2A] shadow-[2px_2px_0px_#2A1A14] focus:outline-none"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block mb-1 font-bold uppercase">COLLEGE EMAIL *</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold uppercase text-[11px]">COLLEGE EMAIL *</label>
+                          {touched.email && !isEmailValid && (
+                            <span className="text-[10px] text-[#8E2A2A] font-bold">Invalid email</span>
+                          )}
+                        </div>
                         <input
                           type="email"
                           required
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="student@campuspost.edu"
-                          className="w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none"
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            setTouched((prev) => ({ ...prev, email: true }));
+                          }}
+                          placeholder="aarav@campuspost.edu"
+                          className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
+                            touched.email && !isEmailValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold uppercase text-[11px]">PHONE (10 DIGITS) *</label>
+                          {touched.phone && !isPhoneValid && (
+                            <span className="text-[10px] text-[#8E2A2A] font-bold">10 digits required</span>
+                          )}
+                        </div>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={15}
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value);
+                            setTouched((prev) => ({ ...prev, phone: true }));
+                          }}
+                          placeholder="9876543210"
+                          className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
+                            touched.phone && !isPhoneValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
+                          }`}
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block mb-1 font-bold uppercase">DEPARTMENT</label>
-                        <select
-                          value={department}
-                          onChange={(e) => setDepartment(e.target.value)}
-                          className="w-full px-2 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold"
-                        >
-                          <option value="Computer Science">Computer Science</option>
-                          <option value="Information Technology">Information Tech</option>
-                          <option value="Electronics & Comm.">Electronics (ECE)</option>
-                          <option value="Mechanical Eng.">Mechanical Eng.</option>
-                          <option value="Civil Engineering">Civil Engineering</option>
-                          <option value="Biotechnology">Biotechnology</option>
-                          <option value="Management Studies">Management (MBA/BBA)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block mb-1 font-bold uppercase">ACADEMIC YEAR</label>
+                        <label className="block mb-1 font-bold uppercase text-[11px]">COLLEGE YEAR *</label>
                         <select
                           value={year}
                           onChange={(e) => setYear(e.target.value)}
-                          className="w-full px-2 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold"
+                          className="w-full px-2 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14]"
                         >
                           <option value="1st Year">1st Year</option>
                           <option value="2nd Year">2nd Year</option>
                           <option value="3rd Year">3rd Year</option>
                           <option value="4th Year">4th Year</option>
-                          <option value="Postgraduate">Postgraduate</option>
+                          <option value="Post Grad">Post Grad</option>
                         </select>
                       </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="font-bold uppercase text-[11px]">ROLL / ENROLLMENT ID *</label>
+                          {touched.rollNumber && !isRollValid && (
+                            <span className="text-[10px] text-[#8E2A2A] font-bold">Required</span>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          required
+                          value={rollNumber}
+                          onChange={(e) => {
+                            setRollNumber(e.target.value.toUpperCase());
+                            setTouched((prev) => ({ ...prev, rollNumber: true }));
+                          }}
+                          placeholder="22CS084"
+                          className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-black text-[#8E2A2A] shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
+                            touched.rollNumber && !isRollValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 font-bold uppercase text-[11px]">DEPARTMENT</label>
+                      <select
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        className="w-full px-2 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14]"
+                      >
+                        <option value="Computer Science">Computer Science & Eng</option>
+                        <option value="Information Technology">Information Tech</option>
+                        <option value="Electronics & Comm.">Electronics (ECE)</option>
+                        <option value="Mechanical Eng.">Mechanical Eng.</option>
+                        <option value="Civil Engineering">Civil Engineering</option>
+                        <option value="Biotechnology">Biotechnology</option>
+                        <option value="Management Studies">Management Studies</option>
+                      </select>
                     </div>
                   </div>
                 </motion.div>
@@ -248,37 +322,26 @@ export const StoryRegistrationModal: React.FC<Props> = ({
                   </div>
 
                   <h3 className="font-display font-black text-2xl uppercase leading-tight">
-                    Optional details
+                    Squad & Swag (Optional)
                   </h3>
 
                   <div className="space-y-3 pt-1">
                     <div>
-                      <label className="block mb-1 font-bold uppercase">PHONE NUMBER</label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+91 98765 43210"
-                        className="w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14]"
-                      />
-                    </div>
-
-                    <div>
                       <label className="block mb-1 font-bold uppercase">
-                        TEAM NAME (IF PARTICIPATING AS A SQUAD)
+                        TEAM / SQUAD NAME (FOR GROUP ENTRY)
                       </label>
                       <input
                         type="text"
                         value={teamName}
                         onChange={(e) => setTeamName(e.target.value)}
-                        placeholder="e.g. Binary Bandits"
+                        placeholder="e.g. Binary Bandits / Team Alpha"
                         className="w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14]"
                       />
                     </div>
 
                     <div>
                       <label className="block mb-1 font-bold uppercase">
-                        MERCHANDISE / T-SHIRT SIZE
+                        COLLEGE FEST T-SHIRT / MERCHANDISE SIZE
                       </label>
                       <div className="flex gap-2">
                         {['S', 'M', 'L', 'XL', 'XXL'].map((sz) => (
@@ -286,10 +349,10 @@ export const StoryRegistrationModal: React.FC<Props> = ({
                             key={sz}
                             type="button"
                             onClick={() => setTshirtSize(sz)}
-                            className={`flex-1 py-1.5 rounded-lg border-2 border-[#2A1A14] font-bold ${
+                            className={`flex-1 py-2 rounded-xl border-2 border-[#2A1A14] font-bold shadow-[2px_2px_0px_#2A1A14] transition-all ${
                               tshirtSize === sz
                                 ? 'bg-[#8E2A2A] text-[#FFF6E5]'
-                                : 'bg-[#FFF6E5] text-[#2A1A14]'
+                                : 'bg-[#FFF6E5] text-[#2A1A14] hover:bg-[#F3E6CE]'
                             }`}
                           >
                             {sz}
