@@ -32,14 +32,8 @@ import { NewEventModal } from './components/NewEventModal';
 import { CurtainTransition } from './components/CurtainTransition';
 import { ToastContainer, ToastMessage } from './components/Toast';
 import { CampusTrailMap } from './components/CampusTrailMap';
-import {
-  PostageStamp,
-  PointingHand,
-  ImportantStamp,
-  WaxSeal,
-  RoundRubberStamp,
-  PaperClip,
-} from './components/PostalDecorations';
+import { ScrollStory } from './components/ScrollStory';
+import { Flourish } from './components/Flourish';
 
 import {
   Mail,
@@ -75,7 +69,7 @@ const DEFAULT_ORGANIZER: OrganizerProfile = {
 };
 
 export default function App() {
-  // Global Role: 'landing' | 'student' | 'organizer'
+  // Global Role: 'landing' | 'student' | 'organizer' | 'trail'
   const [activeRole, setActiveRole] = useState<ActiveRole>('landing');
   const [studentTab, setStudentTab] = useState<'board' | 'passes' | 'profile'>('board');
 
@@ -99,9 +93,9 @@ export default function App() {
 
   // Page Transition Curtain
   const [isCurtainActive, setIsCurtainActive] = useState(false);
-  const [curtainTargetTitle, setCurtainTargetTitle] = useState('');
+  const [curtainTargetTitle, setCurtainTargetTitle] = useState('CENTRAL CAMPUS GATE');
 
-  // Modals
+  // Active Modals
   const [registeringEvent, setRegisteringEvent] = useState<CampusEvent | null>(null);
   const [celebrationPass, setCelebrationPass] = useState<CampusPass | null>(null);
   const [inspectingEvent, setInspectingEvent] = useState<CampusEvent | null>(null);
@@ -114,54 +108,68 @@ export default function App() {
     event: CampusEvent;
   } | null>(null);
 
-  // Toast notification state
+  // Toast notifications system
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const showToast = (
-    title: string,
-    description?: string,
-    type: 'success' | 'info' | 'reminder' | 'error' = 'success'
-  ) => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev, { id, title, description, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+  const showToast = (title: string, description?: string, type: ToastMessage['type'] = 'info') => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newToast: ToastMessage = { id, title, description, type };
+    setToasts((prev) => [...prev, newToast]);
   };
 
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Sync state helper
+  // Re-read data from dataService
   const refreshData = () => {
     setEvents(dataService.getEvents());
     setPasses(dataService.getPasses());
     setScans(dataService.getScans());
     setFeedbacks(dataService.getAllFeedbacks());
+    const stu = dataService.getStudentSession();
+    if (stu) setStudentProfile(stu);
+    const org = dataService.getOrganizerSession();
+    if (org) setOrganizerProfile(org);
   };
 
-  // Keyboard Shortcuts (N = new event, S = scanner)
+  // Sync profiles
+  const handleUpdateStudentProfile = (profile: StudentProfile) => {
+    dataService.setStudentSession(profile);
+    setStudentProfile(profile);
+    refreshData();
+    showToast('★ Profile Saved', 'Your student details were updated successfully.', 'success');
+  };
+
+  // Parse deep-links from hash
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const activeEl = document.activeElement;
-      const isInput =
-        activeEl?.tagName === 'INPUT' ||
-        activeEl?.tagName === 'TEXTAREA' ||
-        activeEl?.tagName === 'SELECT';
-
-      if (isInput) return;
-
-      if (e.key === 's' || e.key === 'S') {
-        e.preventDefault();
-        setShowScanner((prev) => !prev);
-      } else if (e.key === 'n' || e.key === 'N') {
-        e.preventDefault();
-        setEditingEvent(null);
-        setShowNewEventModal(true);
+    const checkHash = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#pass=')) {
+        const passCode = hash.replace('#pass=', '').trim().toUpperCase();
+        const found = passes.find((p) => p.code.toUpperCase() === passCode);
+        if (found) {
+          setCelebrationPass(found);
+        }
+      } else if (hash.startsWith('#trail')) {
+        setActiveRole('trail');
       }
     };
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, [passes]);
 
+  // Keyboard shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.key === 's' || e.key === 'S') {
+        setShowScanner((prev) => !prev);
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -189,12 +197,6 @@ export default function App() {
     setTimeout(() => {
       setIsCurtainActive(false);
     }, 650);
-  };
-
-  // Student Profile Update
-  const handleUpdateStudentProfile = (updated: StudentProfile) => {
-    setStudentProfile(updated);
-    dataService.setStudentSession(updated);
   };
 
   // Registration Completed
@@ -233,20 +235,20 @@ export default function App() {
   const checkInRate = totalRegistered > 0 ? Math.round((totalCheckedIn / totalRegistered) * 100) : 0;
 
   return (
-    <div className="relative min-h-screen city-bg text-[#2A1A14] overflow-x-hidden selection:bg-[#8E2A2A] selection:text-[#FFF6E5] pb-24 md:pb-12">
-      {/* Background City Silhouette Texture */}
-      <div className="fixed inset-0 city-facade pointer-events-none z-0 opacity-40" />
+    <div className="relative min-h-screen dark-fantasy-bg text-[#FFF6E5] overflow-x-hidden selection:bg-[#B3345C] selection:text-[#FFF6E5] pb-24 md:pb-12">
+      {/* Subtle Atmospheric Film Grain */}
+      <div className="fixed inset-0 film-grain pointer-events-none z-30 opacity-40" />
 
-      {/* Paper & Ink Grain Overlay */}
-      <div className="fixed inset-0 paper-grain pointer-events-none z-30 opacity-70" />
+      {/* Ruined Spires Silhouette Overlay along bottom of page */}
+      <div className="fixed inset-x-0 bottom-0 h-44 spires-silhouette pointer-events-none z-0 opacity-40" />
 
-      {/* Kinetic Curtain Page Transition */}
+      {/* Cinematic Dark Page Transition */}
       <CurtainTransition
         isActive={isCurtainActive}
         targetPageTitle={curtainTargetTitle}
       />
 
-      {/* Top Bar Navigation with Quick Role Switcher */}
+      {/* Translucent Glass Top Bar Navigation */}
       <TopBar
         activeRole={activeRole}
         onSwitchRole={switchRoleWithCurtain}
@@ -264,144 +266,113 @@ export default function App() {
       {/* MAIN VIEWPORT ROUTING */}
       <main className="relative z-10">
         {/* ========================================================
-            VIEW: LANDING PORTAL (CAMPUS NOTICE BOARD & ROLE GATE)
+            VIEW: LANDING PORTAL (DARK STORYBOOK SCROLL HERO + BOARD)
         ======================================================== */}
         {activeRole === 'landing' && (
           <div className="space-y-16">
-            {/* Landing Hero: Giant Campus Dispatch Envelope */}
-            <section className="relative px-4 sm:px-6 pt-10 sm:pt-16 pb-6 max-w-5xl mx-auto select-none">
-              <div className="relative bg-[#A98258] border-[4px] border-[#2A1A14] rounded-[44px] p-6 sm:p-10 shadow-[12px_12px_0px_#2A1A14] text-center space-y-6">
-                {/* Envelope Top Triangle Flap */}
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-64 h-14 bg-[#8B6A47] border-t-2 border-x-2 border-[#2A1A14] rounded-t-3xl flex items-center justify-center">
-                  <WaxSeal letter="C" className="w-14 h-14 -mt-3" />
-                </div>
+            {/* SCROLL STORY 600vh HERO STAGE */}
+            <ScrollStory
+              events={events}
+              onSelectRole={switchRoleWithCurtain}
+              onSelectCategory={(cat) => setCategoryFilter(cat)}
+            />
 
-                {/* Subtitle Ribbon */}
-                <div className="inline-block bg-[#8E2A2A] text-[#FFF6E5] border-2 border-[#2A1A14] px-4 py-1 font-typewriter text-xs font-black tracking-[0.25em] uppercase shadow-[3px_3px_0px_#2A1A14] mt-2">
-                  ★ OFFICIAL UNIVERSITY DISPATCH ★
-                </div>
-
-                {/* Main Headline */}
-                <div className="space-y-1 py-1">
-                  <p className="font-script text-5xl sm:text-7xl text-[#FFF6E5] leading-none drop-shadow-[2px_2px_0px_#2A1A14]">
-                    Welcome to
-                  </p>
-                  <h1 className="font-display font-black text-4xl sm:text-6xl lg:text-7xl uppercase tracking-tight text-retro-outline-plum leading-tight">
-                    CAMPUS POST
-                  </h1>
-                </div>
-
-                {/* Problem Statement & Mission */}
-                <p className="font-serif-flourish italic text-base sm:text-lg text-[#FFF6E5]/90 max-w-2xl mx-auto leading-relaxed">
-                  No more messy Google Forms or manual spreadsheets. Discover college tech fests, cultural nights, workshops, and sports tournaments. Register with one click, get official stamped QR passes, and check in with tamper-proof duplicate prevention.
-                </p>
-
-                {/* Two Big Role Selection Buttons */}
-                <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
-                  {/* Option 1: Student */}
-                  <div className="flex items-center gap-3">
-                    <PointingHand direction="right" className="w-12 h-6" />
-                    <button
-                      onClick={() => switchRoleWithCurtain('student')}
-                      className="btn-postal-red px-7 py-4 rounded-2xl text-xs uppercase font-bold tracking-wider shadow-[4px_4px_0px_#2A1A14]"
-                    >
-                      I'm a Student ★
-                    </button>
-                  </div>
-
-                  {/* Option 2: Organizer */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => switchRoleWithCurtain('organizer')}
-                      className="btn-postal-cream px-7 py-4 rounded-2xl text-xs uppercase font-bold tracking-wider shadow-[4px_4px_0px_#2A1A14]"
-                    >
-                      I'm an Organizer (Clubs & Faculty)
-                    </button>
-                    <PointingHand direction="left" className="w-12 h-6" />
-                  </div>
-
-                  {/* Option 3: Campus Trail Map */}
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => switchRoleWithCurtain('trail')}
-                      className="btn-postal-kraft px-7 py-4 rounded-2xl text-xs uppercase font-bold tracking-wider shadow-[4px_4px_0px_#2A1A14] flex items-center gap-2"
-                    >
-                      <Compass className="w-4 h-4 text-[#FFF6E5]" />
-                      <span>Campus Trail Map ★</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Postage Stamps Bar at Bottom of Envelope */}
-                <div className="pt-4 border-t-2 border-dashed border-[#2A1A14]/30 flex flex-wrap items-center justify-between text-left font-typewriter text-xs text-[#FFF6E5]/80 gap-3">
-                  <div className="flex items-center gap-3">
-                    <PostageStamp price="CAMPUS" title="NOTICE" color="#8E2A2A" className="w-10 h-12" />
-                    <div>
-                      <span className="font-bold block text-[#FFF6E5]">DISPATCH REGISTRY VERIFIED</span>
-                      <span className="text-[10px] opacity-80 text-[#FFF6E5]/80">Unique 6-char entry codes · Real-time camera scanner</span>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="font-bold block text-[#FFF6E5]">ZERO SETUP REQUIRED</span>
-                    <span className="text-[10px] opacity-80 text-[#FFF6E5]/80">5 realistic college events pre-loaded with live data</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Telegram Stat Strip Section */}
-            <section className="max-w-6xl mx-auto px-4 sm:px-6 select-none">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-typewriter">
-                <div className="p-4 rounded-2xl bg-[#F3E6CE] border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] space-y-1">
-                  <span className="text-[9px] font-bold text-[#8E2A2A] uppercase block">NOTICE BOARD POSTINGS</span>
-                  <span className="font-display font-black text-3xl text-[#2A1A14] block">
-                    0{events.length} EVENTS
+            {/* CINEMATIC STAT STRIP SECTION */}
+            <section className="max-w-6xl mx-auto px-4 sm:px-6 select-none -mt-8 relative z-20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="glass-panel p-5 rounded-2xl border border-[#E8D9B0]/20 hover:border-[#E8D9B0]/50 transition-all flex flex-col justify-between"
+                >
+                  <span className="font-display text-[10px] uppercase tracking-widest text-[#E8D9B0]/75 block">
+                    ACTIVE NOTICES
                   </span>
-                  <span className="text-[10px] opacity-75 block">Tech, Cultural, Sports & Workshops</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#F3E6CE] border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] space-y-1">
-                  <span className="text-[9px] font-bold text-[#8E2A2A] uppercase block">DISPATCHED PASSES</span>
-                  <span className="font-display font-black text-3xl text-[#2A1A14] block">
-                    {totalRegistered} REGISTERED
+                  <span className="font-display font-black text-3xl sm:text-4xl text-gold-gradient block my-1">
+                    0{events.length} REALMS
                   </span>
-                  <span className="text-[10px] opacity-75 block">Across all campus departments</span>
-                </div>
+                  <span className="font-sans text-xs text-[#FFF6E5]/70 block">
+                    Tech, Cultural, Sports & Workshops
+                  </span>
+                </motion.div>
 
-                <div className="p-4 rounded-2xl bg-[#F3E6CE] border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] space-y-1">
-                  <span className="text-[9px] font-bold text-[#8E2A2A] uppercase block">CHECK-IN TURN-OUT</span>
-                  <span className="font-display font-black text-3xl text-[#5B7A3A] block">
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="glass-panel p-5 rounded-2xl border border-[#E8D9B0]/20 hover:border-[#E8D9B0]/50 transition-all flex flex-col justify-between"
+                >
+                  <span className="font-display text-[10px] uppercase tracking-widest text-[#E8D9B0]/75 block">
+                    ISSUED DISPATCHES
+                  </span>
+                  <span className="font-display font-black text-3xl sm:text-4xl text-gold-gradient block my-1">
+                    {totalRegistered} PASSES
+                  </span>
+                  <span className="font-sans text-xs text-[#FFF6E5]/70 block">
+                    Cryptographic passes minted
+                  </span>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="glass-panel p-5 rounded-2xl border border-[#E8D9B0]/20 hover:border-[#E8D9B0]/50 transition-all flex flex-col justify-between"
+                >
+                  <span className="font-display text-[10px] uppercase tracking-widest text-[#E8D9B0]/75 block">
+                    VERIFIED ATTENDANCE
+                  </span>
+                  <span className="font-display font-black text-3xl sm:text-4xl text-[#E04A7B] block my-1">
                     {totalCheckedIn} ({checkInRate}%)
                   </span>
-                  <span className="text-[10px] opacity-75 block">Verified at venue entrance desk</span>
-                </div>
+                  <span className="font-sans text-xs text-[#FFF6E5]/70 block">
+                    Scanned at festival portal gates
+                  </span>
+                </motion.div>
 
-                <div className="p-4 rounded-2xl bg-[#F3E6CE] border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] space-y-1">
-                  <span className="text-[9px] font-bold text-[#8E2A2A] uppercase block">DUPLICATE SHIELD</span>
-                  <span className="font-display font-black text-3xl text-[#8E2A2A] block">
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="glass-panel p-5 rounded-2xl border border-[#E8D9B0]/20 hover:border-[#E8D9B0]/50 transition-all flex flex-col justify-between"
+                >
+                  <span className="font-display text-[10px] uppercase tracking-widest text-[#E8D9B0]/75 block">
+                    CRYPTOGRAPHIC SHIELD
+                  </span>
+                  <span className="font-display font-black text-3xl sm:text-4xl text-emerald-400 block my-1">
                     100% ATOMIC
                   </span>
-                  <span className="text-[10px] opacity-75 block">Immediate duplicate pass rejection</span>
-                </div>
+                  <span className="font-sans text-xs text-[#FFF6E5]/70 block">
+                    Zero duplicate scans permitted
+                  </span>
+                </motion.div>
               </div>
             </section>
 
-            {/* Pinned Bulletin Board Notices Section */}
-            <section id="notice-board-preview" className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 select-none">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b-2 border-[#2A1A14]/30 pb-4">
+            {/* PINNED BULLETIN BOARD NOTICES SECTION */}
+            <section id="notice-board-preview" className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8 select-none pt-4">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#E8D9B0]/20 pb-6">
                 <div>
-                  <div className="flex items-center gap-2 font-typewriter text-xs text-[#FFF6E5]/80 uppercase tracking-widest">
-                    <PaperClip className="w-4 h-6 text-[#F3E6CE]" />
-                    <span>PINNED BULLETIN POSTERS</span>
+                  <div className="font-eyebrow text-sm text-[#E8D9B0] uppercase tracking-[0.25em]">
+                    Active Festival Dispatches
                   </div>
-                  <h2 className="font-display font-black text-3xl sm:text-4xl text-[#FFF6E5] uppercase tracking-tight text-retro-outline-plum mt-1">
-                    ACTIVE CAMPUS EVENTS
+                  <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl uppercase tracking-wider text-gold-gradient mt-1">
+                    NOTICE BOARD ARENA
                   </h2>
+                  <Flourish className="w-52 h-6 mt-2" color="#E8D9B0" delay={0.1} />
                 </div>
 
-                {/* Category Filters */}
-                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#A98258] border-2 border-[#2A1A14] rounded-2xl font-typewriter text-xs shadow-[3px_3px_0px_#2A1A14]">
+                {/* Category Filters as Glass Pills with Crimson Glow on active */}
+                <div className="flex flex-wrap items-center gap-2">
                   {['ALL', 'Tech', 'Cultural', 'Sports', 'Workshop', 'Club Drive'].map((cat) => (
                     <button
                       key={cat}
@@ -409,10 +380,10 @@ export default function App() {
                         postalSoundFx.playTypewriterTick();
                         setCategoryFilter(cat);
                       }}
-                      className={`px-3 py-1 rounded-xl transition-all ${
+                      className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
                         categoryFilter === cat
-                          ? 'bg-[#F3E6CE] text-[#2A1A14] font-black'
-                          : 'text-[#FFF6E5] hover:text-[#FFF6E5]'
+                          ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_20px_rgba(224,74,123,0.55)] scale-105'
+                          : 'glass-pill text-[#FFF6E5]/80 hover:text-[#FFF6E5]'
                       }`}
                     >
                       {cat}
@@ -431,7 +402,6 @@ export default function App() {
                       (p.studentEmail.toLowerCase() === studentProfile.collegeEmail.toLowerCase() ||
                         p.studentRollNumber.toLowerCase() === studentProfile.rollNumber.toLowerCase())
                   );
-                  const rotations = ['rotate-[-0.8deg]', 'rotate-[0.8deg]', 'rotate-0', 'rotate-[-1deg]'];
 
                   return (
                     <EnvelopeEventCard
@@ -440,7 +410,6 @@ export default function App() {
                       isRegistered={!!userPass}
                       onOpenDetails={() => setInspectingEvent(ev)}
                       onQuickRegister={() => setRegisteringEvent(ev)}
-                      rotation={rotations[idx % rotations.length]}
                       onShowToast={showToast}
                     />
                   );

@@ -224,17 +224,16 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
   return (
     <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 space-y-8 select-none">
       {/* Top Header & Shortcuts Bar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-2 border-[#2A1A14]/40 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#E8D9B0]/20 pb-6">
         <div>
-          <div className="flex items-center gap-2 font-typewriter text-xs text-[#FFF6E5]/80 uppercase tracking-widest">
-            <ImportantStamp text="ORGANIZER" className="text-[10px]" />
-            <span>CAMPUS POST // SORTING OFFICE & COMMAND PORTAL</span>
+          <div className="font-eyebrow text-xs text-[#E8D9B0] uppercase tracking-[0.25em]">
+            Command Center // Festival Warden Console
           </div>
-          <h1 className="font-display font-black text-4xl sm:text-5xl text-[#FFF6E5] uppercase tracking-tight mt-1 text-retro-outline-plum">
+          <h1 className="font-display font-black text-3xl sm:text-5xl text-gold-gradient uppercase tracking-wider mt-1">
             {organizerProfile?.clubName || 'CAMPUS DISPATCH'} HUD
           </h1>
-          <p className="font-serif-flourish italic text-sm text-[#FFF6E5]/80 mt-1">
-            Managing {events.length} campus event registrations and door attendance scanners.
+          <p className="font-eyebrow text-sm text-[#FFF6E5]/80 mt-1">
+            Overseeing {events.length} festival arenas and cryptographic attendance checkpoint desks.
           </p>
         </div>
 
@@ -243,63 +242,63 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
           {/* Judging Demo Runner Button */}
           <button
             onClick={handleRunDemoScenario}
-            className="btn-postal-kraft flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs uppercase"
+            className="btn-glass-pill flex items-center gap-1.5 px-4 py-2 text-xs uppercase"
             title="Run end-to-end demo test with duplicate rejection"
           >
-            <Play className="w-3.5 h-3.5 text-[#FFF6E5]" />
-            <span>Run Demo Scenario ★</span>
+            <Play className="w-3.5 h-3.5 text-[#E04A7B]" />
+            <span>Run Demo Test ★</span>
           </button>
 
           {/* Reset Demo Data */}
           <button
             onClick={handleResetDemoSeed}
-            className="btn-postal-cream flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs uppercase"
-            title="Reset to 3 initial events"
+            className="btn-ghost-pill flex items-center gap-1.5 px-3.5 py-2 text-xs uppercase"
+            title="Reset to initial campus events"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-[#8E2A2A]" />
-            <span>Reset Demo Data</span>
+            <RefreshCw className="w-3.5 h-3.5 text-[#E8D9B0]" />
+            <span>Reset Demo</span>
           </button>
 
           {/* New Event Button (Shortcut N) */}
           <button
             onClick={onOpenNewEvent}
-            className="btn-postal-cream flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs uppercase"
+            className="btn-glass-pill flex items-center gap-1.5 px-4 py-2 text-xs uppercase"
           >
-            <Plus className="w-3.5 h-3.5 text-[#8E2A2A]" />
+            <Plus className="w-3.5 h-3.5 text-[#E8D9B0]" />
             <span>New Event</span>
-            <kbd className="bg-[#2A1A14] text-[#FFF6E5] px-1 py-0.2 rounded text-[9px]">N</kbd>
+            <kbd className="bg-black/40 text-[#E8D9B0] px-1.5 py-0.5 rounded text-[9px] border border-[#E8D9B0]/20">N</kbd>
           </button>
 
           {/* Scanner Button (Shortcut S) */}
           <button
             onClick={() => onOpenScanner(currentEvent?.id)}
-            className="btn-postal-red flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs uppercase font-bold"
+            className="btn-crimson-pill flex items-center gap-1.5 px-5 py-2 text-xs uppercase font-semibold"
           >
             <QrCode className="w-3.5 h-3.5" />
-            <span>Check-in Desk</span>
-            <kbd className="bg-[#FFF6E5] text-[#2A1A14] px-1 py-0.2 rounded text-[9px] font-black">S</kbd>
+            <span>Gate Scanner</span>
+            <kbd className="bg-black/30 text-[#FFF6E5] px-1.5 py-0.5 rounded text-[9px]">S</kbd>
           </button>
         </div>
       </div>
 
       {/* Demo Runner Result Banner (if triggered) */}
       {demoLog && (
-        <div className="p-4 rounded-2xl bg-[#F3E6CE] border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] text-[#2A1A14] font-typewriter space-y-2">
-          <div className="flex items-center justify-between border-b border-[#2A1A14]/20 pb-1">
-            <span className="font-black text-[#8E2A2A] text-xs">★ {demoLog.title}</span>
+        <div className="p-4 rounded-2xl glass-panel border border-emerald-500/40 text-[#FFF6E5] font-sans space-y-2 shadow-[0_0_24px_rgba(16,185,129,0.25)]">
+          <div className="flex items-center justify-between border-b border-white/10 pb-1">
+            <span className="font-bold text-[#E04A7B] text-xs">★ {demoLog.title}</span>
             <button
               onClick={() => setDemoLog(null)}
-              className="text-xs hover:font-bold"
+              className="text-xs text-[#FFF6E5]/70 hover:text-[#FFF6E5]"
             >
               Dismiss
             </button>
           </div>
-          <p className="text-xs">{demoLog.details}</p>
-          <div className="flex flex-wrap gap-4 pt-1 text-xs font-black">
-            <span className="text-[#5B7A3A] bg-[#FFF6E5] px-2 py-0.5 rounded border border-[#5B7A3A]">
+          <p className="text-xs text-[#FFF6E5]/90">{demoLog.details}</p>
+          <div className="flex flex-wrap gap-4 pt-1 text-xs font-semibold">
+            <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30">
               {demoLog.firstScanStatus}
             </span>
-            <span className="text-[#8E2A2A] bg-[#FFF6E5] px-2 py-0.5 rounded border border-[#8E2A2A]">
+            <span className="text-[#E04A7B] bg-[#B3345C]/20 px-2.5 py-1 rounded-full border border-[#E04A7B]/40">
               {demoLog.secondScanStatus}
             </span>
           </div>
@@ -308,12 +307,11 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
 
       {/* Select Active Event Carousel / Tabs */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between font-typewriter text-xs text-[#FFF6E5]">
-          <span className="font-bold uppercase tracking-wider flex items-center gap-1.5">
-            <PointingHand direction="right" className="w-6 h-3" />
-            <span>SELECT EVENT TO MANAGE:</span>
+        <div className="flex items-center justify-between font-sans text-xs text-[#E8D9B0]">
+          <span className="font-medium uppercase tracking-wider flex items-center gap-1.5">
+            <span>SELECT ARENA TO MANAGE:</span>
           </span>
-          <span className="opacity-75">CLICK AN ENVELOPE TO SWITCH FOCUS</span>
+          <span className="text-[11px] text-[#FFF6E5]/60">CLICK AN ARENA TO FOCUS COMMAND DECK</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -323,25 +321,25 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
               <div
                 key={ev.id}
                 onClick={() => setSelectedEventId(ev.id)}
-                className={`cursor-pointer p-3.5 rounded-2xl border-[3px] border-[#2A1A14] font-typewriter transition-all ${
+                className={`cursor-pointer p-4 rounded-2xl border font-sans transition-all ${
                   isSelected
-                    ? 'bg-[#F3E6CE] text-[#2A1A14] shadow-[5px_5px_0px_#2A1A14] ring-2 ring-[#FFF6E5]'
-                    : 'bg-[#A98258] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14] hover:bg-[#B58E62]'
+                    ? 'glass-panel border-[#E8D9B0] shadow-[0_0_24px_rgba(232,217,176,0.25)] scale-[1.01]'
+                    : 'glass-panel-subtle border-[#E8D9B0]/20 hover:border-[#E8D9B0]/45'
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] pb-1 border-b border-[#2A1A14]/20">
-                  <span className="font-black uppercase">{ev.category}</span>
-                  <span className="font-bold text-[#8E2A2A] bg-[#FFF6E5] px-1.5 rounded">
+                <div className="flex items-center justify-between text-[10px] pb-1 border-b border-[#E8D9B0]/15">
+                  <span className="font-semibold text-[#E8D9B0] uppercase">{ev.category}</span>
+                  <span className="font-bold text-[#E04A7B] bg-[#B3345C]/20 px-2 py-0.5 rounded-full border border-[#B3345C]/30">
                     {ev.status}
                   </span>
                 </div>
-                <h4 className="font-display font-black text-sm uppercase truncate mt-1">
+                <h4 className="font-display font-black text-sm uppercase truncate text-[#FFF6E5] mt-1.5">
                   {ev.title}
                 </h4>
-                <div className="flex items-center justify-between text-[11px] pt-2 mt-1">
+                <div className="flex items-center justify-between text-[11px] pt-2 mt-1 text-[#FFF6E5]/75">
                   <span>{ev.date.slice(0, 15)}</span>
-                  <span className="font-bold text-[#8E2A2A]">
-                    {ev.registeredCount}/{ev.capacity} Stamped
+                  <span className="font-semibold text-[#E8D9B0]">
+                    {ev.registeredCount}/{ev.capacity} Claimed
                   </span>
                 </div>
               </div>
@@ -352,7 +350,7 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
 
       {/* Current Event Command Module */}
       {currentEvent && (
-        <div className="bg-[#F3E6CE] border-[3.5px] border-[#2A1A14] rounded-[36px] p-6 sm:p-8 shadow-[8px_8px_0px_#2A1A14] text-[#2A1A14] space-y-6">
+        <div className="glass-panel border border-[#E8D9B0]/25 rounded-[32px] p-6 sm:p-8 shadow-[0_16px_48px_rgba(0,0,0,0.6)] text-[#FFF6E5] space-y-6">
           {/* Header of Active Event */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-dashed border-[#2A1A14]/30 pb-4">
             <div>
@@ -404,13 +402,13 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
           </div>
 
           {/* Module Sub-tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b-2 border-[#2A1A14]/20 pb-3 font-typewriter text-xs">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#E8D9B0]/20 pb-4 font-sans text-xs">
             <button
               onClick={() => setEventTab('overview')}
-              className={`px-3 py-1.5 rounded-lg border-2 border-[#2A1A14] font-bold ${
+              className={`px-4 py-2 rounded-full font-medium transition-all ${
                 eventTab === 'overview'
-                  ? 'bg-[#8E2A2A] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14]'
-                  : 'bg-[#FFF6E5] text-[#2A1A14]'
+                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
+                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
               }`}
             >
               1. Overview & Analytics
@@ -418,10 +416,10 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
 
             <button
               onClick={() => setEventTab('participants')}
-              className={`px-3 py-1.5 rounded-lg border-2 border-[#2A1A14] font-bold ${
+              className={`px-4 py-2 rounded-full font-medium transition-all ${
                 eventTab === 'participants'
-                  ? 'bg-[#8E2A2A] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14]'
-                  : 'bg-[#FFF6E5] text-[#2A1A14]'
+                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
+                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
               }`}
             >
               2. Participants Ledger ({eventPasses.length})
@@ -429,10 +427,10 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
 
             <button
               onClick={() => setEventTab('feedback')}
-              className={`px-3 py-1.5 rounded-lg border-2 border-[#2A1A14] font-bold ${
+              className={`px-4 py-2 rounded-full font-medium transition-all ${
                 eventTab === 'feedback'
-                  ? 'bg-[#8E2A2A] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14]'
-                  : 'bg-[#FFF6E5] text-[#2A1A14]'
+                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
+                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
               }`}
             >
               3. Attendee Feedback ({eventFeedbacks.length})
@@ -440,10 +438,10 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
 
             <button
               onClick={() => setEventTab('posterQr')}
-              className={`px-3 py-1.5 rounded-lg border-2 border-[#2A1A14] font-bold ${
+              className={`px-4 py-2 rounded-full font-medium transition-all ${
                 eventTab === 'posterQr'
-                  ? 'bg-[#8E2A2A] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14]'
-                  : 'bg-[#FFF6E5] text-[#2A1A14]'
+                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
+                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
               }`}
             >
               4. Registration QR & Link
@@ -454,35 +452,35 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
           {eventTab === 'overview' && (
             <div className="space-y-6">
               {/* Stat Tiles */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-typewriter">
-                <div className="p-3.5 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl shadow-[2px_2px_0px_#2A1A14]">
-                  <span className="text-[10px] opacity-75 font-bold uppercase block">REGISTERED:</span>
-                  <span className="font-display font-black text-2xl text-[#2A1A14]">{totalRegistered}</span>
-                  <span className="text-[9px] opacity-60 block">of {currentEvent.capacity} seats</span>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-sans">
+                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
+                  <span className="text-[10px] text-[#E8D9B0]/80 font-semibold uppercase block">REGISTERED:</span>
+                  <span className="font-display font-black text-2xl text-gold-gradient block my-0.5">{totalRegistered}</span>
+                  <span className="text-[10px] text-[#FFF6E5]/60 block">of {currentEvent.capacity} seats</span>
                 </div>
 
-                <div className="p-3.5 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl shadow-[2px_2px_0px_#2A1A14]">
-                  <span className="text-[10px] opacity-75 font-bold uppercase block">CHECKED IN:</span>
-                  <span className="font-display font-black text-2xl text-[#5B7A3A]">{totalCheckedIn}</span>
-                  <span className="text-[9px] opacity-60 block">at threshold</span>
+                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
+                  <span className="text-[10px] text-emerald-400 font-semibold uppercase block">CHECKED IN:</span>
+                  <span className="font-display font-black text-2xl text-emerald-400 block my-0.5">{totalCheckedIn}</span>
+                  <span className="text-[10px] text-[#FFF6E5]/60 block">at threshold</span>
                 </div>
 
-                <div className="p-3.5 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl shadow-[2px_2px_0px_#2A1A14]">
-                  <span className="text-[10px] opacity-75 font-bold uppercase block">SPOTS LEFT:</span>
-                  <span className="font-display font-black text-2xl text-[#8E2A2A]">{spotsLeft}</span>
-                  <span className="text-[9px] opacity-60 block">open capacity</span>
+                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
+                  <span className="text-[10px] text-[#E04A7B] font-semibold uppercase block">SPOTS LEFT:</span>
+                  <span className="font-display font-black text-2xl text-[#E04A7B] block my-0.5">{spotsLeft}</span>
+                  <span className="text-[10px] text-[#FFF6E5]/60 block">open capacity</span>
                 </div>
 
-                <div className="p-3.5 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl shadow-[2px_2px_0px_#2A1A14]">
-                  <span className="text-[10px] opacity-75 font-bold uppercase block">PENDING / NO-SHOWS:</span>
-                  <span className="font-display font-black text-2xl text-[#A98258]">{noShows}</span>
-                  <span className="text-[9px] opacity-60 block">unverified</span>
+                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
+                  <span className="text-[10px] text-[#E8D9B0]/80 font-semibold uppercase block">PENDING / NO-SHOWS:</span>
+                  <span className="font-display font-black text-2xl text-[#E8D9B0] block my-0.5">{noShows}</span>
+                  <span className="text-[10px] text-[#FFF6E5]/60 block">unverified</span>
                 </div>
 
-                <div className="p-3.5 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl shadow-[2px_2px_0px_#2A1A14] col-span-2 sm:col-span-1">
-                  <span className="text-[10px] opacity-75 font-bold uppercase block">ATTENDANCE %:</span>
-                  <span className="font-display font-black text-2xl text-[#5E1250]">{attendanceRate}%</span>
-                  <span className="text-[9px] opacity-60 block">turnout rate</span>
+                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl col-span-2 sm:col-span-1">
+                  <span className="text-[10px] text-[#E04A7B] font-semibold uppercase block">ATTENDANCE %:</span>
+                  <span className="font-display font-black text-2xl text-[#E04A7B] block my-0.5">{attendanceRate}%</span>
+                  <span className="text-[10px] text-[#FFF6E5]/60 block">turnout rate</span>
                 </div>
               </div>
 

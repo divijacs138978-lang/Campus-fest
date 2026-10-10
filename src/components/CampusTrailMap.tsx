@@ -350,37 +350,38 @@ export const CampusTrailMap: React.FC<Props> = ({ events, onSelectEvent, onClose
   ];
 
   return (
-    <div className="relative w-full min-h-screen bg-[#380B30] text-[#FFF6E5] flex flex-col font-sans select-none pb-20 overflow-x-hidden">
-      {/* Background duotone city backdrop with dark vignette */}
-      <div className="fixed inset-0 pointer-events-none opacity-20 city-bg mix-blend-overlay z-0" />
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(26,5,22,0.85)_100%)] z-0" />
+    <div className="relative w-full min-h-screen dark-fantasy-bg text-[#FFF6E5] flex flex-col font-sans select-none pb-20 overflow-x-hidden">
+      {/* Background Film Grain and Ruined Spires */}
+      <div className="fixed inset-0 pointer-events-none film-grain z-0 opacity-40" />
+      <div className="fixed inset-0 pointer-events-none dark-vignette z-0" />
+      <div className="fixed inset-x-0 bottom-0 h-44 spires-silhouette pointer-events-none z-0 opacity-40" />
 
       {/* TOP BAR / HEADER */}
-      <header className="sticky top-0 z-40 bg-[#5E1250]/95 backdrop-blur-md border-b-2 border-[#2A1A14] px-4 py-3 shadow-[0_4px_12px_rgba(0,0,0,0.3)]">
+      <header className="sticky top-0 z-40 bg-[#0B1030]/90 backdrop-blur-xl border-b border-[#E8D9B0]/20 px-4 py-3 shadow-[0_4px_24px_rgba(0,0,0,0.5)]">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           {/* Title Area */}
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="shrink-0 -my-1">
-              <PostageStamp price="MAP" title="TRAIL" color="#8E2A2A" className="w-9 h-11" />
+            <div className="w-10 h-10 rounded-full bg-[#1B2257] border border-[#E8D9B0]/30 flex items-center justify-center text-[#E8D9B0]">
+              <Compass className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-display font-black text-2xl text-[#FFF6E5] tracking-wide uppercase text-retro-outline-plum">
+                <h1 className="font-display font-black text-2xl text-gold-gradient tracking-wide uppercase">
                   CAMPUS TRAIL
                 </h1>
-                <span className="bg-[#8E2A2A] text-[#FFF6E5] text-[10px] font-black px-1.5 py-0.5 rounded border border-[#2A1A14] font-typewriter uppercase">
+                <span className="bg-[#B3345C] text-[#FFF6E5] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
                   ROAD MAP
                 </span>
               </div>
-              <span className="font-serif-flourish italic text-xs text-[#F3E6CE]/80 block -mt-1">
-                find your way to events, food & stages
+              <span className="font-eyebrow text-xs text-[#E8D9B0]/80 block -mt-0.5">
+                find your way to events, food arenas & stages
               </span>
             </div>
 
             {onClose && (
               <button
                 onClick={onClose}
-                className="ml-auto sm:hidden p-2 rounded-xl bg-[#F3E6CE] text-[#2A1A14] border-2 border-[#2A1A14] shadow-[2px_2px_0px_#2A1A14] font-bold text-xs"
+                className="ml-auto sm:hidden p-2 rounded-full glass-pill text-[#FFF6E5]"
                 title="Close Trail Map"
               >
                 <X className="w-4 h-4" />
@@ -390,7 +391,7 @@ export const CampusTrailMap: React.FC<Props> = ({ events, onSelectEvent, onClose
 
           {/* Quick From Selector */}
           <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            <span className="font-typewriter text-[11px] font-bold text-[#F3E6CE] uppercase shrink-0">
+            <span className="font-sans text-[11px] font-semibold text-[#E8D9B0] uppercase shrink-0">
               FROM:
             </span>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -398,10 +399,10 @@ export const CampusTrailMap: React.FC<Props> = ({ events, onSelectEvent, onClose
                 <button
                   key={opt.id}
                   onClick={() => handleSetStart(opt.id)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-typewriter font-bold uppercase border border-[#2A1A14] transition-all ${
+                  className={`px-3 py-1 rounded-full text-[11px] font-sans font-medium uppercase transition-all ${
                     startStopId === opt.id
-                      ? 'bg-[#8E2A2A] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14]'
-                      : 'bg-[#F3E6CE] text-[#2A1A14] hover:bg-[#FFF6E5]'
+                      ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_12px_rgba(224,74,123,0.4)]'
+                      : 'glass-pill text-[#FFF6E5]/80 hover:text-[#FFF6E5]'
                   }`}
                 >
                   {opt.label}
@@ -412,7 +413,7 @@ export const CampusTrailMap: React.FC<Props> = ({ events, onSelectEvent, onClose
             {onClose && (
               <button
                 onClick={onClose}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3E6CE] text-[#2A1A14] border-2 border-[#2A1A14] shadow-[2px_2px_0px_#2A1A14] font-typewriter text-xs font-black uppercase hover:bg-[#FFF6E5] active:translate-y-0.5 ml-2"
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full btn-ghost-pill text-xs font-semibold uppercase hover:bg-white/10 ml-2"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Exit Map</span>
@@ -425,26 +426,26 @@ export const CampusTrailMap: React.FC<Props> = ({ events, onSelectEvent, onClose
         <div className="max-w-4xl mx-auto mt-3 flex flex-col sm:flex-row items-center gap-2">
           {/* Search Box */}
           <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2A1A14]/70" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E8D9B0]/60" />
             <input
               type="text"
-              placeholder="Find stall, event or place (e.g. biryani)..."
+              placeholder="Find stall, event or arena (e.g. biryani)..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl text-xs text-[#2A1A14] placeholder-[#2A1A14]/60 font-typewriter shadow-[2px_2px_0px_#2A1A14] focus:outline-none focus:ring-1 focus:ring-[#8E2A2A]"
+              className="w-full pl-9 pr-3 py-1.5 bg-[#10142E]/80 border border-[#E8D9B0]/25 rounded-full text-xs text-[#FFF6E5] placeholder-[#FFF6E5]/50 font-sans shadow-[0_4px_16px_rgba(0,0,0,0.3)] focus:outline-none focus:border-[#E8D9B0]/60"
             />
             {searchQuery && (
               <button
                 onClick={() => handleSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#2A1A14]"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[#FFF6E5]/70"
               >
                 ×
               </button>
             )}
           </div>
 
-          {/* Filter Chips as rubber-stamp pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 sm:pb-0 font-typewriter text-[10px]">
+          {/* Filter Chips as Glass Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 sm:pb-0 font-sans text-[10px]">
             {(['ALL', 'EVENTS', 'FOOD', 'MERCH', 'GAMES', 'FACILITIES', 'LIVE'] as FilterCategory[]).map(
               (cat) => (
                 <button
@@ -453,10 +454,10 @@ export const CampusTrailMap: React.FC<Props> = ({ events, onSelectEvent, onClose
                     postalSoundFx.playTypewriterTick();
                     setActiveFilter(cat);
                   }}
-                  className={`px-2.5 py-1 rounded-full uppercase font-black tracking-wider border border-[#2A1A14] whitespace-nowrap transition-transform ${
+                  className={`px-3 py-1 rounded-full uppercase font-semibold tracking-wider whitespace-nowrap transition-all ${
                     activeFilter === cat
-                      ? 'bg-[#8E2A2A] text-[#FFF6E5] shadow-[2px_2px_0px_#2A1A14] scale-105'
-                      : 'bg-[#5E1250] text-[#FFF6E5]/75 hover:bg-[#8E2A2A]/50'
+                      ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_12px_rgba(224,74,123,0.5)] scale-105'
+                      : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
                   }`}
                 >
                   {cat === 'LIVE' ? '🔴 Live Now' : cat}

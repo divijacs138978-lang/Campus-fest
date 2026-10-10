@@ -1,6 +1,6 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { WaxSeal, ImportantStamp } from './PostalDecorations';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Flourish } from './Flourish';
 
 interface Props {
   isActive: boolean;
@@ -11,48 +11,57 @@ export const CurtainTransition: React.FC<Props> = ({
   isActive,
   targetPageTitle,
 }) => {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <AnimatePresence>
       {isActive && (
         <motion.div
-          key="envelope-curtain"
+          key="cinematic-curtain"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[100] bg-[#38072B]/95 backdrop-blur-md flex items-center justify-center p-4 pointer-events-none select-none"
+          transition={{ duration: 0.28 }}
+          className="fixed inset-0 z-[100] bg-[#060A1C]/96 backdrop-blur-2xl flex flex-col items-center justify-center p-6 pointer-events-none select-none overflow-hidden"
         >
-          {/* Centered Kraft Envelope */}
+          {/* Subtle ambient violet & crimson background glows */}
+          <div className="absolute w-[500px] h-[500px] rounded-full bg-[#5B2A86]/25 blur-[120px] pointer-events-none" />
+          <div className="absolute w-[360px] h-[360px] rounded-full bg-[#B3345C]/20 blur-[100px] pointer-events-none translate-y-12" />
+
+          {/* Spires silhouette in background */}
+          <div className="absolute inset-x-0 bottom-0 h-40 spires-silhouette opacity-40 pointer-events-none" />
+
           <motion.div
-            initial={{ scale: 0.8, y: 100 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, y: -120, opacity: 0 }}
-            transition={{ duration: 0.65, ease: [0.76, 0, 0.24, 1] }}
-            className="relative w-84 sm:w-96 bg-[#A98258] border-4 border-[#2A1A14] rounded-3xl p-6 shadow-[10px_10px_0px_#2A1A14] text-center"
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scale: 0.92, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.04, filter: 'blur(8px)' }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 flex flex-col items-center text-center max-w-lg mx-auto"
           >
-            {/* Wax Seal on Flap */}
-            <div className="absolute -top-7 left-1/2 -translate-x-1/2">
-              <WaxSeal letter="R" className="w-12 h-12" />
-            </div>
+            {/* Eyebrow */}
+            <span className="font-eyebrow text-sm sm:text-base tracking-[0.25em] text-[#E8D9B0]/80 uppercase">
+              Now Entering
+            </span>
 
-            {/* Letter Sliding Out of Envelope */}
+            {/* Page Title in Cinzel Gold */}
+            <h2 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl tracking-widest uppercase text-gold-gradient mt-2 leading-tight">
+              {targetPageTitle}
+            </h2>
+
+            {/* Flourish Divider */}
+            <Flourish className="w-56 h-6 my-4" color="#E8D9B0" delay={0.05} />
+
+            {/* Crimson Light-Sweep Line */}
             <motion.div
-              initial={{ y: 20 }}
-              animate={{ y: -50 }}
-              transition={{ delay: 0.2, duration: 0.45 }}
-              className="bg-[#F3E6CE] border-2 border-[#2A1A14] rounded-2xl p-4 shadow-[4px_4px_0px_#2A1A14] text-[#2A1A14] space-y-1"
-            >
-              <span className="font-typewriter text-[10px] text-[#8E2A2A] font-black uppercase tracking-widest block">
-                ★ DISPATCHING TO ★
-              </span>
-              <h2 className="font-display font-black text-2xl uppercase tracking-tight text-[#2A1A14]">
-                {targetPageTitle}
-              </h2>
-            </motion.div>
+              initial={shouldReduceMotion ? { width: '100%' } : { width: '0%', opacity: 0 }}
+              animate={{ width: '100%', opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: 'easeInOut' }}
+              className="h-[2px] w-64 max-w-full bg-gradient-to-r from-transparent via-[#E04A7B] to-transparent shadow-[0_0_16px_#E04A7B]"
+            />
 
-            <div className="mt-4 font-typewriter text-[11px] text-[#FFF6E5]/80 uppercase tracking-widest">
-              UNSEALING DISPATCH...
-            </div>
+            <span className="font-sans text-[11px] tracking-[0.3em] text-[#FFF6E5]/60 uppercase mt-4">
+              Campus Post Portal
+            </span>
           </motion.div>
         </motion.div>
       )}
