@@ -6,12 +6,15 @@
 
 import { CampusEvent } from '../types';
 
-const REMINDERS_STORAGE_KEY = 'campus_post_reminders_v1';
+const REMINDERS_STORAGE_KEY = 'festora_reminders_v1';
+const LEGACY_REMINDERS_KEY = 'campus_post_reminders_v1';
 
 export function getSavedReminders(): Record<string, boolean> {
   if (typeof window === 'undefined') return {};
   try {
-    const raw = localStorage.getItem(REMINDERS_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(REMINDERS_STORAGE_KEY) ||
+      localStorage.getItem(LEGACY_REMINDERS_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};

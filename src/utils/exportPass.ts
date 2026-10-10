@@ -137,7 +137,7 @@ export async function downloadPassAsPNG(pass: CampusPass, format: '9:16' | '1:1'
 
   // Trigger download
   const link = document.createElement('a');
-  link.download = `CAMPUS_POST_${pass.studentRollNumber}_${pass.code}.png`;
+  link.download = `FESTORA_${pass.studentRollNumber}_${pass.code}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
 }

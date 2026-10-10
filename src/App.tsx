@@ -33,25 +33,9 @@ import { EventDetailModal } from './components/EventDetailModal';
 import { ScannerModal } from './components/ScannerModal';
 import { StoryFeedbackModal } from './components/StoryFeedbackModal';
 import { NewEventModal } from './components/NewEventModal';
+import { StudentAuthModal } from './components/StudentAuthModal';
+import { OrganizerAuthModal } from './components/OrganizerAuthModal';
 import { ToastContainer, ToastMessage } from './components/Toast';
-
-const DEFAULT_STUDENT: StudentProfile = {
-  id: 'stu-1',
-  name: 'Aarav Sharma',
-  collegeEmail: 'aarav.sharma@festora.edu',
-  rollNumber: '22CS084',
-  department: 'Computer Science',
-  year: '3rd Year',
-  phone: '+91 98765 43210',
-};
-
-const DEFAULT_ORGANIZER: OrganizerProfile = {
-  id: 'org-1',
-  name: 'Faculty Coordinator',
-  clubName: 'IEEE Student Branch',
-  collegeEmail: 'ieee@festora.edu',
-  pin: '1898',
-};
 
 const ROLE_TITLES: Record<ActiveRole, { title: string; eyebrow: string }> = {
   gate: { title: 'FESTORA GRAND GATE', eyebrow: 'CHOOSE YOUR ENTRY PERSONA' },
@@ -89,14 +73,19 @@ export default function App() {
   const [scans, setScans] = useState<ScanRecord[]>(() => dataService.getScans());
   const [feedbacks, setFeedbacks] = useState<CampusFeedback[]>(() => dataService.getAllFeedbacks());
 
-  // Profiles
+  // Profiles: initialized as null unless saved session exists (no hardcoded fake people)
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(() => {
-    return dataService.getStudentSession() || DEFAULT_STUDENT;
+    return dataService.getStudentSession();
   });
 
   const [organizerProfile, setOrganizerProfile] = useState<OrganizerProfile | null>(() => {
-    return dataService.getOrganizerSession() || DEFAULT_ORGANIZER;
+    return dataService.getOrganizerSession();
   });
+
+  // Auth Modals state
+  const [showStudentAuthModal, setShowStudentAuthModal] = useState(false);
+  const [showOrganizerAuthModal, setShowOrganizerAuthModal] = useState(false);
+  const [pendingRegisterEvent, setPendingRegisterEvent] = useState<CampusEvent | null>(null);
 
   // Page Transition state
   const [isTransitionActive, setIsTransitionActive] = useState(false);
@@ -146,6 +135,54 @@ export default function App() {
     setStudentProfile(profile);
     refreshData();
     showToast('★ Profile Saved', 'Your student credentials have been updated.', 'success');
+  };
+
+  const handleStudentSignInSuccess = (profile: StudentProfile) => {
+    dataService.setStudentSession(profile);
+    setStudentProfile(profile);
+    setShowStudentAuthModal(false);
+    refreshData();
+    showToast('★ Welcome to Festora', `Signed in as ${profile.name} (${profile.rollNumber})`, 'success');
+    if (pendingRegisterEvent) {
+      setRegisteringEvent(pendingRegisterEvent);
+      setPendingRegisterEvent(null);
+    } else {
+      switchRoleWithTransition('student');
+    }
+  };
+
+  const handleStudentSignOut = () => {
+    dataService.setStudentSession(null);
+    setStudentProfile(null);
+    refreshData();
+    showToast('Signed Out', 'You have been signed out of student access.', 'info');
+    switchRoleWithTransition('gate');
+  };
+
+  const handleOrganizerSignInSuccess = (profile: OrganizerProfile) => {
+    dataService.setOrganizerSession(profile);
+    setOrganizerProfile(profile);
+    setShowOrganizerAuthModal(false);
+    refreshData();
+    showToast('Council Access Granted', `Welcome, ${profile.name} (${profile.clubName})`, 'success');
+    switchRoleWithTransition('organizer');
+  };
+
+  const handleOrganizerSignOut = () => {
+    dataService.setOrganizerSession(null);
+    setOrganizerProfile(null);
+    refreshData();
+    showToast('Council Session Ended', 'Signed out of Organizer Command Desk.', 'info');
+    switchRoleWithTransition('gate');
+  };
+
+  const handleQuickRegister = (event: CampusEvent) => {
+    if (!studentProfile) {
+      setPendingRegisterEvent(event);
+      setShowStudentAuthModal(true);
+    } else {
+      setRegisteringEvent(event);
+    }
   };
 
   // Cinematic Page Transition handler (PART 5.A)
@@ -270,6 +307,8 @@ export default function App() {
         canGoForward={historyIndex < historyStack.length - 1}
         onGoBack={handleGoBack}
         onGoForward={handleGoForward}
+        onOpenStudentSignIn={() => setShowStudentAuthModal(true)}
+        onSignOut={handleStudentSignOut}
       />
 
       {/* Main Dynamic View Area */}
@@ -282,7 +321,10 @@ export default function App() {
           <RoleGateView
             onSelectRole={switchRoleWithTransition}
             onOpenTrail={() => switchRoleWithTransition('trail')}
-            organizerPin={organizerProfile?.pin || '1898'}
+            studentProfile={studentProfile}
+            organizerProfile={organizerProfile}
+            onOpenStudentSignIn={() => setShowStudentAuthModal(true)}
+            onOpenOrganizerSignIn={() => setShowOrganizerAuthModal(true)}
           />
         )}
 
@@ -296,11 +338,13 @@ export default function App() {
             studentProfile={studentProfile}
             onUpdateProfile={handleUpdateStudentProfile}
             onSelectEvent={(event) => setInspectingEvent(event)}
-            onQuickRegister={(event) => setRegisteringEvent(event)}
+            onQuickRegister={handleQuickRegister}
             onOpenFeedback={(pass, event) => setFeedbackSession({ pass, event })}
             onUpdatePassTemplate={handleUpdatePassTemplate}
             onShowToast={showToast}
             onOpenTrail={() => switchRoleWithTransition('trail')}
+            onOpenSignIn={() => setShowStudentAuthModal(true)}
+            onSignOut={handleStudentSignOut}
           />
         )}
 
@@ -329,6 +373,7 @@ export default function App() {
               setShowNewEventModal(true);
             }}
             onShowToast={showToast}
+            onSignOut={handleOrganizerSignOut}
           />
         )}
 
@@ -340,6 +385,8 @@ export default function App() {
             events={events}
             onShowToast={showToast}
             onSwitchRole={switchRoleWithTransition}
+            onSelectEvent={(ev) => setInspectingEvent(ev)}
+            onRegisterEvent={handleQuickRegister}
           />
         )}
 
@@ -351,6 +398,8 @@ export default function App() {
             events={events}
             onShowToast={showToast}
             onSwitchRole={switchRoleWithTransition}
+            onSelectEvent={(ev) => setInspectingEvent(ev)}
+            onRegisterEvent={handleQuickRegister}
           />
         )}
 
@@ -362,6 +411,8 @@ export default function App() {
             events={events}
             onShowToast={showToast}
             onSwitchRole={switchRoleWithTransition}
+            onSelectEvent={(ev) => setInspectingEvent(ev)}
+            onRegisterEvent={handleQuickRegister}
           />
         )}
 
@@ -454,6 +505,27 @@ export default function App() {
             setEditingEvent(null);
           }}
           onSaveEvent={handleSaveEvent}
+        />
+      )}
+
+      {/* Student Sign In Modal */}
+      {showStudentAuthModal && (
+        <StudentAuthModal
+          initialProfile={studentProfile}
+          onClose={() => {
+            setShowStudentAuthModal(false);
+            setPendingRegisterEvent(null);
+          }}
+          onSuccess={handleStudentSignInSuccess}
+        />
+      )}
+
+      {/* Organizer Sign In Modal */}
+      {showOrganizerAuthModal && (
+        <OrganizerAuthModal
+          initialProfile={organizerProfile}
+          onClose={() => setShowOrganizerAuthModal(false)}
+          onSuccess={handleOrganizerSignInSuccess}
         />
       )}
 

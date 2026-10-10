@@ -58,7 +58,7 @@ export const RoundRubberStamp: React.FC<{
   color?: 'red' | 'olive' | 'ink';
   className?: string;
 }> = ({
-  text = 'POST OFFICE • VERIFIED',
+  text = 'FESTORA • VERIFIED',
   subtext = 'ADMIT ONE',
   color = 'red',
   className = '',
@@ -82,7 +82,7 @@ export const RoundRubberStamp: React.FC<{
           {subtext}
         </span>
         <span className="text-[8px] tracking-tighter opacity-70 block font-mono">
-          ★ RSVP.POST ★
+          ★ FESTORA.PASS ★
         </span>
       </div>
     </div>

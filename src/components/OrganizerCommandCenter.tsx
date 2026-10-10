@@ -15,7 +15,6 @@ import { useHistory } from '../hooks/useHistory';
 import { exportToCSV } from '../utils/exportCsv';
 import { QRCodeDisplay } from './QRCodeDisplay';
 import { CinemaSeatMap } from './CinemaSeatMap';
-import { EventCategoryShowcase } from './EventCategoryShowcase';
 import { EmptyNoticeState } from './EmptyNoticeState';
 import { ParticipantPortrait } from './ParticipantPortrait';
 import { OrnateButton } from './ui/OrnateButton';
@@ -75,6 +74,7 @@ interface Props {
   onSelectPassToView: (pass: CampusPass) => void;
   onSelectEventToEdit: (event: CampusEvent) => void;
   onShowToast?: (title: string, message: string, type: 'success' | 'error' | 'info') => void;
+  onSignOut?: () => void;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -98,6 +98,7 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
   onSelectPassToView,
   onSelectEventToEdit,
   onShowToast,
+  onSignOut,
 }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(events[0]?.id || '');
   const [eventTab, setEventTab] = useState<'overview' | 'seatMap' | 'participants' | 'requests' | 'feedback' | 'posterQr'>('overview');
@@ -420,9 +421,25 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
               <span>LIVE</span>
             </div>
           </div>
-          <p className="font-sans text-xs text-[#E8D9B0]/70 mt-1">
-            Council Desk · Last telemetry updated at <strong className="text-[#FFF6E5]">{lastUpdated}</strong>
-          </p>
+          <div className="flex items-center gap-3 mt-1 flex-wrap">
+            <p className="font-sans text-xs text-[#E8D9B0]/70">
+              {organizerProfile ? (
+                <>
+                  <strong className="text-[#FFF6E5]">{organizerProfile.name}</strong> ({organizerProfile.clubName}) ·
+                </>
+              ) : null}{' '}
+              Council Desk · Last telemetry updated at <strong className="text-[#FFF6E5]">{lastUpdated}</strong>
+            </p>
+            {onSignOut && (
+              <button
+                onClick={onSignOut}
+                className="text-[11px] font-sans px-2.5 py-0.5 rounded-full bg-red-950/70 border border-red-500/40 text-red-200 hover:bg-red-900/80 transition-colors"
+                title="Sign out of organizer account"
+              >
+                Sign Out
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Toolbar: Undo / Redo & Scanner Button */}
@@ -1351,7 +1368,7 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
           </p>
 
           <div className="my-6 p-4 rounded-2xl bg-white shadow-2xl flex items-center justify-center">
-            <QRCodeDisplay text={`https://campuspost.edu/events#${currentEvent.id}`} size={200} />
+            <QRCodeDisplay text={`https://festora.edu/events#${currentEvent.id}`} size={200} />
           </div>
 
           <p className="font-sans text-xs text-[#FFF6E5]/75">
@@ -1359,15 +1376,6 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
           </p>
         </div>
       )}
-
-      {/* Types of Events Section to keep all dashboard areas rich and populated (PART 2.3) */}
-      <EventCategoryShowcase
-        events={events}
-        onSelectCategory={(cat) => {
-          const match = events.find((e) => e.category === cat);
-          if (match) setSelectedEventId(match.id);
-        }}
-      />
     </div>
   );
 };

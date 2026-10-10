@@ -58,7 +58,7 @@ export const NewEventModal: React.FC<Props> = ({ initialEvent, onClose, onSaveEv
   );
   const [posterColor, setPosterColor] = useState(initialEvent?.posterColor || '#8E2A2A');
   const [organizerClub, setOrganizerClub] = useState(initialEvent?.organizerClub || 'Student Activity Council');
-  const [organizerEmail, setOrganizerEmail] = useState(initialEvent?.organizerEmail || 'council@campuspost.edu');
+  const [organizerEmail, setOrganizerEmail] = useState(initialEvent?.organizerEmail || 'council@festora.edu');
   const [selectedYears, setSelectedYears] = useState<string[]>(
     initialEvent?.eligibilityYears || ['All Years']
   );
@@ -304,7 +304,7 @@ export const NewEventModal: React.FC<Props> = ({ initialEvent, onClose, onSaveEv
                   type="text"
                   value={organizerClub}
                   onChange={(e) => setOrganizerClub(e.target.value)}
-                  placeholder="IEEE Student Branch"
+                  placeholder="e.g. Tech Club or Coding Society"
                   className="w-full bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl px-3 py-2 font-bold"
                 />
               </div>
@@ -317,7 +317,7 @@ export const NewEventModal: React.FC<Props> = ({ initialEvent, onClose, onSaveEv
                   type="email"
                   value={organizerEmail}
                   onChange={(e) => setOrganizerEmail(e.target.value)}
-                  placeholder="ieee@campuspost.edu"
+                  placeholder="organizer@festora.edu"
                   className="w-full bg-[#FFF6E5] border-2 border-[#2A1A14] rounded-xl px-3 py-2 font-bold"
                 />
               </div>

@@ -22,7 +22,9 @@ class SoundFxManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      const savedMute = localStorage.getItem('campus_post_muted');
+      const savedMute =
+        localStorage.getItem('festora_muted') ||
+        localStorage.getItem('campus_post_muted');
       this.isMuted = savedMute === 'true';
     }
   }
@@ -60,7 +62,7 @@ class SoundFxManager {
   setMuted(muted: boolean) {
     this.isMuted = muted;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('campus_post_muted', String(muted));
+      localStorage.setItem('festora_muted', String(muted));
     }
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(muted ? 0 : 0.65, this.ctx.currentTime);

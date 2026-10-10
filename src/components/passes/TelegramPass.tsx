@@ -17,7 +17,7 @@ export const TelegramPass: React.FC<Props> = ({ pass, className = '' }) => {
         <div className="flex items-center justify-between border-b-2 border-[#2A1A14] pb-3">
           <div className="flex items-center gap-2">
             <span className="bg-[#2A1A14] text-[#FFF6E5] px-2 py-0.5 text-xs font-black tracking-widest uppercase">
-              CAMPUS DISPATCH WIRE
+              FESTORA DISPATCH WIRE
             </span>
             <ImportantStamp text="CONFIRMED" className="text-[10px]" />
           </div>

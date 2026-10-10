@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { CampusEvent } from '../types';
-import { CAMPUS_CATEGORIES, CategoryInfo } from '../data/categories';
-import { getEvent3DAsset } from '../assets/images';
+import { CAMPUS_CATEGORIES } from '../data/categories';
+import { OrnateButton } from './ui/OrnateButton';
 import {
-  MapPin,
   Calendar,
   Clock,
+  MapPin,
   Users,
   Bell,
   BellRing,
+  Info,
+  CheckCircle2,
+  Sparkles,
+  Layers,
+  ChevronRight,
+  Radio,
   Download,
   CalendarPlus,
-  Sparkles,
-  CheckCircle2,
-  ShieldCheck,
-  ArrowRight,
-  BookOpen,
 } from 'lucide-react';
 import {
   isReminderSet,
@@ -45,16 +45,10 @@ export const EventQuestCard: React.FC<EventQuestCardProps> = ({
   const [hasReminder, setHasReminder] = useState(() => isReminderSet(event.id));
   const [showReminderMenu, setShowReminderMenu] = useState(false);
 
-  // Match category info for gaming styling, icons, and fallbacks
-  const catInfo: CategoryInfo | undefined = CAMPUS_CATEGORIES.find(
-    (c) => c.id.toLowerCase() === event.category.toLowerCase()
-  );
-
-  const accentColor = catInfo?.accentColor || '#E8D9B0';
-  const badgeBg = catInfo?.badgeBg || 'rgba(232, 217, 176, 0.12)';
-  const characterTitle = catInfo?.characterTitle || event.category.toUpperCase();
-  const Icon = catInfo?.icon || Sparkles;
-  const asset3D = getEvent3DAsset(event.category, event.title);
+  // Retrieve category design tokens
+  const catInfo =
+    CAMPUS_CATEGORIES.find((c) => c.id === event.category) || CAMPUS_CATEGORIES[0];
+  const Icon = catInfo.icon;
 
   const isFull = event.status === 'FULL' || event.registeredCount >= event.capacity;
   const isLive = event.status === 'LIVE';
@@ -64,24 +58,12 @@ export const EventQuestCard: React.FC<EventQuestCardProps> = ({
     Math.round((event.registeredCount / event.capacity) * 100)
   );
 
-  // Build "WHAT TO EXPECT" items from event's own data or fallback to guild defaults
-  const expectations: string[] = (() => {
-    // If event has custom tags beyond the category name
-    const validTags = (event.tags || []).filter(
-      (t) =>
-        t.toLowerCase() !== event.category.toLowerCase() &&
-        t.toLowerCase() !== 'festora' &&
-        !t.toLowerCase().includes('spots')
-    );
-    if (validTags.length >= 2) {
-      return validTags.slice(0, 3).map((t) => `${t.charAt(0).toUpperCase() + t.slice(1)} focus track`);
-    }
-    return catInfo?.whatToExpect.slice(0, 3) || [
-      'Official competition briefing & track mentorship',
-      'Exclusive certified digital participation pass',
-      'Live stage telemetry & networking opportunity',
-    ];
-  })();
+  // Derive "What to Expect" bullet list:
+  // Use event tags if available, or fall back to category expectations
+  const whatToExpectItems =
+    event.tags && event.tags.length >= 2
+      ? event.tags.slice(0, 3).map((tag) => tag.replace(/_/g, ' '))
+      : catInfo.whatToExpect.slice(0, 3);
 
   const handleToggleReminder = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -92,14 +74,14 @@ export const EventQuestCard: React.FC<EventQuestCardProps> = ({
     if (nextState) {
       await requestAndSendNotification(event);
       onShowToast?.(
-        '★ Alert Activated',
-        `Notification scheduled for ${event.title}`,
+        '★ Reminder Set',
+        `You will be notified before ${event.title}`,
         'reminder'
       );
     } else {
       onShowToast?.(
-        'Alert Disabled',
-        `Reminder removed for ${event.title}`,
+        'Reminder Removed',
+        `Notification cancelled for ${event.title}`,
         'reminder'
       );
     }
@@ -107,308 +89,282 @@ export const EventQuestCard: React.FC<EventQuestCardProps> = ({
 
   const handleDownloadICS = (e: React.MouseEvent) => {
     e.stopPropagation();
-    soundFx.playClick();
+    soundFx.playConfirm();
     downloadEventICS(event);
     setShowReminderMenu(false);
-    onShowToast?.(
-      '★ Calendar File Exported',
-      `.ics downloaded for ${event.title}`,
-      'success'
-    );
+    onShowToast?.('Calendar File Exported', 'iCal (.ics) saved to downloads', 'success');
   };
 
-  const handleOpenGoogleCalendar = (e: React.MouseEvent) => {
+  const handleOpenGoogleCal = (e: React.MouseEvent) => {
     e.stopPropagation();
     soundFx.playClick();
+    window.open(getGoogleCalendarUrl(event), '_blank');
     setShowReminderMenu(false);
-    const url = getGoogleCalendarUrl(event);
-    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <div
-      onClick={onOpenDetails}
-      className="group relative rounded-2xl bg-[#060A1C]/92 border border-[#E8D9B0]/25 p-5 sm:p-6 flex flex-col justify-between overflow-hidden shadow-2xl hover:border-[#E8D9B0]/60 transition-all duration-300 hover:shadow-[0_0_30px_rgba(232,217,176,0.18)] cursor-pointer select-none"
+    <article
+      className="group relative flex flex-col justify-between rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 hover:border-[#E8D9B0]/60 transition-all duration-300 shadow-[0_12px_40px_rgba(0,0,0,0.65)] hover:shadow-[0_16px_50px_rgba(0,0,0,0.85)] hover:-translate-y-1 overflow-hidden"
+      style={{
+        boxShadow: `0 8px 30px -4px ${catInfo.accentGlow}`,
+      }}
     >
-      {/* 4 Gold Corner Brackets (Game UI / Guild Card visual signature) */}
-      <span className="pointer-events-none absolute top-1.5 left-1.5 w-3 h-3 border-t-2 border-l-2 border-[#E8D9B0]/60 transition-colors group-hover:border-[#E8D9B0]" />
-      <span className="pointer-events-none absolute top-1.5 right-1.5 w-3 h-3 border-t-2 border-r-2 border-[#E8D9B0]/60 transition-colors group-hover:border-[#E8D9B0]" />
-      <span className="pointer-events-none absolute bottom-1.5 left-1.5 w-3 h-3 border-b-2 border-l-2 border-[#E8D9B0]/60 transition-colors group-hover:border-[#E8D9B0]" />
-      <span className="pointer-events-none absolute bottom-1.5 right-1.5 w-3 h-3 border-b-2 border-r-2 border-[#E8D9B0]/60 transition-colors group-hover:border-[#E8D9B0]" />
-
-      {/* Ambient background glow tinted by category accent color */}
+      {/* Top Category Accent Line */}
       <div
-        className="absolute top-0 right-0 w-44 h-44 rounded-full blur-3xl pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity duration-500"
-        style={{ backgroundColor: accentColor }}
+        className="h-1.5 w-full transition-all duration-300"
+        style={{ backgroundColor: catInfo.accentColor }}
       />
 
-      {/* Top Header Row: Category Badge + Status + Remind Menu */}
-      <div>
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#E8D9B0]/15">
-          {/* Eyebrow Label & Category Icon */}
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center border shadow-sm shrink-0"
-              style={{
-                backgroundColor: badgeBg,
-                borderColor: `${accentColor}66`,
-                color: accentColor,
-              }}
-            >
-              <Icon className="w-4 h-4" />
-            </div>
-            <div>
-              <span
-                className="font-mono text-[11px] font-bold uppercase tracking-wider block"
-                style={{ color: accentColor }}
-              >
-                {characterTitle}
-              </span>
-              <span className="font-sans text-[10px] text-[#E8D9B0]/70 uppercase tracking-widest block">
-                {event.category} Quest
-              </span>
-            </div>
-          </div>
+      {/* Gold Corner Filigree Brackets */}
+      <span className="pointer-events-none absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-l-2 border-[#E8D9B0]/70" />
+      <span className="pointer-events-none absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-[#E8D9B0]/70" />
+      <span className="pointer-events-none absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-[#E8D9B0]/70" />
+      <span className="pointer-events-none absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-[#E8D9B0]/70" />
 
-          {/* Right Status Badge & Reminder Bell */}
-          <div className="flex items-center gap-2">
-            {/* Status Badge */}
-            <span
-              className={`font-sans text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border transition-all ${
-                isLive
-                  ? 'bg-[#B3345C] text-[#FFF6E5] border-[#E04A7B] shadow-[0_0_12px_#E04A7B] animate-pulse'
-                  : event.status === 'OPEN'
-                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/50'
-                  : event.status === 'FULL'
-                  ? 'bg-[#B3345C]/40 text-[#FFF6E5] border-[#B3345C]'
-                  : 'bg-black/60 text-[#FFF6E5]/60 border-white/15'
-              }`}
-            >
-              {isLive ? '🔴 LIVE' : event.status}
-            </span>
-
-            {/* Remind Me Button */}
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowReminderMenu(!showReminderMenu);
+      {/* Main Content Area */}
+      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+        <div>
+          {/* Header Bar: Category Avatar, Eyebrow & Status Badge */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className="w-10 h-10 rounded-xl overflow-hidden border border-[#E8D9B0]/40 flex items-center justify-center shrink-0 shadow-md bg-[#10142E]"
+                style={{
+                  boxShadow: `0 0 14px ${catInfo.accentGlow}`,
                 }}
-                className={`p-1.5 rounded-full border transition-all ${
-                  hasReminder
-                    ? 'bg-[#B3345C] text-[#FFF6E5] border-[#E04A7B] shadow-[0_0_10px_rgba(224,74,123,0.5)]'
-                    : 'bg-[#10142E] text-[#E8D9B0] border-[#E8D9B0]/30 hover:border-[#E8D9B0]'
-                }`}
-                title={hasReminder ? 'Reminder is Active' : 'Set Event Reminder'}
-                aria-label="Toggle reminder menu"
               >
-                {hasReminder ? (
-                  <BellRing className="w-3.5 h-3.5 animate-bounce" />
-                ) : (
-                  <Bell className="w-3.5 h-3.5" />
-                )}
-              </button>
+                <img
+                  src={catInfo.characterImg}
+                  alt={catInfo.characterTitle}
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform"
+                />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[11px] font-sans font-bold uppercase tracking-wider text-[#E8D9B0] truncate">
+                  <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: catInfo.accentColor }} />
+                  <span>{catInfo.displayName}</span>
+                </div>
+                <div
+                  className="text-[10px] font-serif italic tracking-wide truncate"
+                  style={{ color: catInfo.accentColor }}
+                >
+                  {catInfo.characterTitle.toUpperCase()}
+                </div>
+              </div>
+            </div>
 
-              {/* Reminder Dropdown Menu */}
-              <AnimatePresence>
-                {showReminderMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 top-full mt-2 w-52 bg-[#060A1C] border border-[#E8D9B0]/50 rounded-2xl p-2 shadow-2xl z-40 font-sans text-xs space-y-1 backdrop-blur-xl"
-                  >
-                    <button
-                      onClick={handleToggleReminder}
-                      className="w-full text-left p-2 rounded-xl hover:bg-[#1B2257] flex items-center justify-between transition-colors font-medium text-[#FFF6E5]"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <Bell className="w-3.5 h-3.5 text-[#E04A7B]" />
-                        <span>{hasReminder ? 'Disable Alert' : 'Enable Web Alert'}</span>
-                      </span>
-                      <span className="text-[10px] font-bold text-[#E8D9B0]">
-                        {hasReminder ? 'ON' : 'OFF'}
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={handleDownloadICS}
-                      className="w-full text-left p-2 rounded-xl hover:bg-[#1B2257] flex items-center gap-1.5 transition-colors font-medium text-[#FFF6E5]"
-                    >
-                      <Download className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Export iCal (.ics)</span>
-                    </button>
-
-                    <button
-                      onClick={handleOpenGoogleCalendar}
-                      className="w-full text-left p-2 rounded-xl hover:bg-[#1B2257] flex items-center gap-1.5 transition-colors font-medium text-[#FFF6E5]"
-                    >
-                      <CalendarPlus className="w-3.5 h-3.5 text-[#38BDF8]" />
-                      <span>Google Calendar</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            {/* Status Badge */}
+            <div className="shrink-0 flex items-center gap-1.5">
+              {isLive ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider bg-red-950/80 text-red-200 border border-red-500/50 animate-pulse">
+                  <Radio className="w-3 h-3 text-red-400" />
+                  <span>LIVE</span>
+                </span>
+              ) : isFull ? (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider bg-slate-900 text-slate-400 border border-slate-700">
+                  FULL
+                </span>
+              ) : (
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider border border-white/10"
+                  style={{
+                    backgroundColor: catInfo.badgeBg,
+                    color: catInfo.accentColor,
+                  }}
+                >
+                  <span>OPEN</span>
+                </span>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Title, Club & 3D Character Preview */}
-        <div className="flex items-start justify-between gap-3 mt-4">
-          <div className="flex-1">
-            <h3 className="font-display font-black text-lg sm:text-xl text-[#FFF6E5] uppercase leading-snug group-hover:text-gold-gradient transition-all">
+          {/* Title & Club */}
+          <div className="mb-3">
+            <h3
+              onClick={onOpenDetails}
+              className="font-display font-bold text-lg sm:text-xl text-[#FFF6E5] hover:text-[#E8D9B0] transition-colors cursor-pointer leading-tight mb-1"
+            >
               {event.title}
             </h3>
-            <p className="font-eyebrow text-xs italic text-[#E8D9B0]/80 mt-1">
-              Organized by {event.organizerClub}
-            </p>
-          </div>
-
-          {/* 3D Visual Art Preview */}
-          <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden shrink-0 border border-[#E8D9B0]/40 bg-[#10142E] shadow-md group-hover:scale-105 transition-transform duration-300 relative">
-            <img
-              src={asset3D}
-              alt={event.category}
-              className="w-full h-full object-cover object-top"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-            <span className="absolute bottom-1 right-1 font-mono text-[8px] font-black text-[#E8D9B0] bg-[#060A1C]/80 px-1 rounded uppercase">
-              3D
-            </span>
-          </div>
-        </div>
-
-        {/* Date, Time & Venue Bar */}
-        <div className="mt-4 p-3 rounded-xl bg-[#10142E]/80 border border-[#E8D9B0]/20 flex flex-col gap-1.5 text-xs">
-          <div className="flex flex-wrap items-center gap-2 text-[#FFF6E5]">
-            <span className="flex items-center gap-1 text-[#E04A7B] font-semibold">
-              <Calendar className="w-3.5 h-3.5 shrink-0" />
-              <span>{event.dayLabel || 'CAMPUS'}</span>
-            </span>
-            <span className="text-[#E8D9B0]/50">•</span>
-            <span className="font-mono text-[#E8D9B0]">{event.date}</span>
-            <span className="text-[#E8D9B0]/50">•</span>
-            <span className="flex items-center gap-1 text-emerald-400">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span>{event.time}</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-[#FFF6E5]/80 pt-1 border-t border-[#E8D9B0]/10">
-            <MapPin className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
-            <span className="font-medium truncate">{event.venue}</span>
-          </div>
-        </div>
-
-        {/* Event Description (short readable text + "Read more") */}
-        <div className="mt-4">
-          <p className="font-sans text-xs text-[#FFF6E5]/80 leading-relaxed line-clamp-3">
-            {event.description}
-          </p>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenDetails();
-            }}
-            className="mt-1 text-[11px] font-semibold text-[#E8D9B0] hover:text-[#FFF6E5] flex items-center gap-1 group/btn"
-          >
-            <span>Read full brief & rules</span>
-            <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-
-        {/* WHAT TO EXPECT: Bullet list */}
-        <div className="mt-4 pt-3 border-t border-[#E8D9B0]/15 flex flex-col gap-1.5">
-          <span className="font-heading text-[10px] uppercase tracking-wider text-[#E8D9B0]/70 font-bold flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-[#E8D9B0]" />
-            What to Expect:
-          </span>
-          {expectations.map((bullet, idx) => (
-            <div key={idx} className="flex items-start gap-1.5 text-[11px] text-[#FFF6E5]/75 leading-tight">
-              <span className="text-[#E04A7B] shrink-0 text-xs leading-none mt-0.5">✦</span>
-              <span>{bullet}</span>
+            <div className="text-xs font-serif italic text-[#E8D9B0]/80 flex items-center gap-1.5">
+              <span>Organized by:</span>
+              <span className="font-semibold text-[#FFF6E5]">{event.organizerClub}</span>
             </div>
-          ))}
+          </div>
+
+          {/* Schedule & Venue Meta */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 rounded-xl bg-[#10142E]/70 border border-[#E8D9B0]/15 mb-3.5 text-xs text-[#FFF6E5]/80 font-sans">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5 text-[#E8D9B0]/70 shrink-0" />
+              <span className="truncate">{event.date}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-[#E8D9B0]/70 shrink-0" />
+              <span className="truncate">{event.time}</span>
+            </div>
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <MapPin className="w-3.5 h-3.5 text-[#E04A7B] shrink-0" />
+              <span className="truncate">{event.venue}</span>
+            </div>
+          </div>
+
+          {/* Description (Readable with Read More trigger) */}
+          <div className="mb-4">
+            <p className="font-sans text-xs text-[#FFF6E5]/85 leading-relaxed line-clamp-3">
+              {event.description}
+            </p>
+            <button
+              onClick={onOpenDetails}
+              className="mt-1 text-[11px] font-semibold text-[#E8D9B0] hover:text-[#FFF6E5] inline-flex items-center gap-0.5 transition-colors underline-offset-2 hover:underline"
+            >
+              <span>Read more</span>
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* WHAT TO EXPECT Section */}
+          <div className="p-3 rounded-xl bg-[#0B1030]/80 border border-[#E8D9B0]/15 mb-4">
+            <div className="flex items-center gap-1.5 text-[10px] font-display uppercase tracking-widest text-[#E8D9B0] mb-2 font-bold">
+              <Sparkles className="w-3 h-3 text-[#E8D9B0]" />
+              <span>WHAT TO EXPECT</span>
+            </div>
+            <ul className="space-y-1.5 text-[11px] font-sans text-[#FFF6E5]/85">
+              {whatToExpectItems.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-1.5 leading-snug">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full mt-1 shrink-0"
+                    style={{ backgroundColor: catInfo.accentColor }}
+                  />
+                  <span className="capitalize">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        {/* Eligibility & Duration Stat Chips */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-4 text-[10px] font-mono">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#10142E] border border-[#E8D9B0]/25 text-[#E8D9B0]">
-            <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            {event.eligibilityYears.slice(0, 2).join(', ')}
-          </span>
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#10142E] border border-[#E8D9B0]/25 text-[#FFF6E5]/80">
-            {event.eligibilityDepartments.slice(0, 2).join(', ')}
-          </span>
-          {catInfo?.typicalDuration && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#10142E] border border-[#E8D9B0]/25 text-[#38BDF8]">
-              <Clock className="w-3 h-3" />
+        {/* Bottom Section: Stat Chips & Progress Bar */}
+        <div>
+          {/* Eligibility & Duration Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-3">
+            <span className="px-2 py-0.5 rounded-md bg-[#1B2257]/60 border border-[#E8D9B0]/20 text-[10px] font-mono text-[#E8D9B0]">
               {catInfo.typicalDuration}
             </span>
-          )}
-        </div>
-
-        {/* Capacity Progress Bar */}
-        <div className="mt-4 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-sans">
-            <span className="text-[#E8D9B0]/80 flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-[#38BDF8]" />
-              Capacity:
-            </span>
-            <span className="font-bold text-[#FFF6E5]">
-              {event.registeredCount}/{event.capacity} ({spotsLeft} spots left)
-            </span>
+            {event.eligibilityYears && event.eligibilityYears[0] && (
+              <span className="px-2 py-0.5 rounded-md bg-[#1B2257]/60 border border-[#E8D9B0]/20 text-[10px] font-mono text-[#FFF6E5]/75">
+                {event.eligibilityYears[0]}
+              </span>
+            )}
+            {event.eligibilityDepartments && event.eligibilityDepartments[0] && (
+              <span className="px-2 py-0.5 rounded-md bg-[#1B2257]/60 border border-[#E8D9B0]/20 text-[10px] font-mono text-[#FFF6E5]/75 truncate max-w-[150px]">
+                {event.eligibilityDepartments[0]}
+              </span>
+            )}
           </div>
 
-          <div className="w-full bg-[#060A1C] h-2 rounded-full overflow-hidden border border-[#E8D9B0]/20 p-0.5">
-            <div
-              style={{
-                width: `${fillPercentage}%`,
-                backgroundColor: fillPercentage >= 95 ? '#B3345C' : accentColor,
-              }}
-              className="h-full rounded-full transition-all duration-300 shadow-[0_0_8px_currentColor]"
-            />
+          {/* Capacity Progress Bar */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-[10px] font-mono text-[#FFF6E5]/75 mb-1">
+              <span className="flex items-center gap-1">
+                <Users className="w-3 h-3 text-[#E8D9B0]/70" />
+                <span>Spots Left: <strong className="text-[#FFF6E5]">{spotsLeft}</strong> / {event.capacity}</span>
+              </span>
+              <span>{fillPercentage}% Full</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-[#10142E] overflow-hidden border border-[#E8D9B0]/20">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${fillPercentage}%`,
+                  backgroundColor: isFull ? '#EF4444' : catInfo.accentColor,
+                  boxShadow: `0 0 8px ${isFull ? '#EF4444' : catInfo.accentColor}`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Action Row */}
+          <div className="relative pt-3 border-t border-[#E8D9B0]/20 flex items-center gap-2">
+            {/* Reminder Dropdown Button */}
+            <div className="relative">
+              <button
+                onClick={handleToggleReminder}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setShowReminderMenu((prev) => !prev);
+                }}
+                className={`px-2.5 py-2 rounded-xl border transition-all flex items-center gap-1 text-xs font-sans font-medium ${
+                  hasReminder
+                    ? 'bg-[#E8D9B0] text-[#060A1C] border-[#E8D9B0] shadow-[0_0_12px_rgba(232,217,176,0.4)]'
+                    : 'bg-[#10142E] text-[#E8D9B0] border-[#E8D9B0]/30 hover:border-[#E8D9B0]'
+                }`}
+                title={hasReminder ? 'Reminder Active (Click to cancel, right-click for iCal)' : 'Set Event Reminder'}
+                aria-label="Toggle calendar reminder"
+              >
+                {hasReminder ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                <span className="text-[11px]">{hasReminder ? 'Reminded' : 'Remind'}</span>
+              </button>
+
+              {showReminderMenu && (
+                <div className="absolute left-0 bottom-full mb-2 w-48 rounded-xl bg-[#060A1C] border border-[#E8D9B0]/30 shadow-2xl p-1.5 z-30 font-sans text-xs">
+                  <button
+                    onClick={handleDownloadICS}
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left hover:bg-[#1B2257] text-[#FFF6E5] flex items-center gap-2 transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#E8D9B0]" />
+                    <span>Download .ics File</span>
+                  </button>
+                  <button
+                    onClick={handleOpenGoogleCal}
+                    className="w-full px-2.5 py-1.5 rounded-lg text-left hover:bg-[#1B2257] text-[#FFF6E5] flex items-center gap-2 transition-colors"
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5 text-[#38BDF8]" />
+                    <span>Google Calendar</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Details Button */}
+            <button
+              onClick={onOpenDetails}
+              className="px-3 py-2 rounded-xl bg-[#10142E] hover:bg-[#1B2257] border border-[#E8D9B0]/30 hover:border-[#E8D9B0] text-[#FFF6E5] text-xs font-sans font-medium transition-colors flex items-center gap-1.5"
+            >
+              <Info className="w-3.5 h-3.5 text-[#E8D9B0]" />
+              <span>Details</span>
+            </button>
+
+            {/* Register / Claimed Button */}
+            <div className="flex-1">
+              {isRegistered ? (
+                <button
+                  onClick={onOpenDetails}
+                  className="w-full py-2 px-3 rounded-xl bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 text-xs font-sans font-bold flex items-center justify-center gap-1.5 shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:brightness-110 transition-all"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>★ Pass Claimed</span>
+                </button>
+              ) : isFull ? (
+                <button
+                  disabled
+                  className="w-full py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 text-slate-500 text-xs font-sans font-semibold cursor-not-allowed"
+                >
+                  Arena Full
+                </button>
+              ) : (
+                <OrnateButton
+                  variant="primary"
+                  size="sm"
+                  onClick={onQuickRegister}
+                  className="w-full"
+                >
+                  <span>Register</span>
+                  <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                </OrnateButton>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Card Action Buttons Toolbar (Inside the Same Card) */}
-      <div className="mt-6 pt-4 border-t border-[#E8D9B0]/20 flex items-center justify-between gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenDetails();
-          }}
-          className="px-3 py-2 rounded-xl text-xs font-semibold text-[#E8D9B0] hover:text-[#FFF6E5] bg-[#10142E] border border-[#E8D9B0]/30 hover:border-[#E8D9B0] transition-all flex items-center gap-1.5"
-        >
-          <BookOpen className="w-3.5 h-3.5 text-[#38BDF8]" />
-          <span>Details</span>
-        </button>
-
-        {isRegistered ? (
-          <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-950/70 border border-emerald-400 text-xs font-bold text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            Pass Claimed
-          </span>
-        ) : isFull ? (
-          <span className="px-4 py-2 rounded-full bg-[#B3345C]/30 border border-[#B3345C] text-xs font-bold text-[#E04A7B]">
-            House Full
-          </span>
-        ) : (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuickRegister();
-            }}
-            className="btn-crimson-pill px-4 sm:px-5 py-2 text-xs uppercase tracking-wider font-bold gap-1.5 shadow-[0_0_16px_rgba(224,74,123,0.4)] hover:brightness-110 active:scale-95 transition-all"
-          >
-            <span>Register</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-    </div>
+    </article>
   );
 };

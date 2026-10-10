@@ -192,7 +192,7 @@ export const StoryRegistrationModal: React.FC<Props> = ({
                           setName(e.target.value);
                           setTouched((prev) => ({ ...prev, name: true }));
                         }}
-                        placeholder="e.g. Aarav Sharma"
+                        placeholder="Your full name"
                         className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
                           touched.name && !isNameValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
                         }`}
@@ -215,7 +215,7 @@ export const StoryRegistrationModal: React.FC<Props> = ({
                             setEmail(e.target.value);
                             setTouched((prev) => ({ ...prev, email: true }));
                           }}
-                          placeholder="aarav@campuspost.edu"
+                          placeholder="you@college.edu"
                           className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-bold shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
                             touched.email && !isEmailValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
                           }`}
@@ -277,7 +277,7 @@ export const StoryRegistrationModal: React.FC<Props> = ({
                             setRollNumber(e.target.value.toUpperCase());
                             setTouched((prev) => ({ ...prev, rollNumber: true }));
                           }}
-                          placeholder="22CS084"
+                          placeholder="e.g. 24CS101"
                           className={`w-full px-3 py-2 rounded-xl bg-[#FFF6E5] border-2 font-black text-[#8E2A2A] shadow-[2px_2px_0px_#2A1A14] focus:outline-none ${
                             touched.rollNumber && !isRollValid ? 'border-[#8E2A2A] bg-[#FFF0F0]' : 'border-[#2A1A14]'
                           }`}

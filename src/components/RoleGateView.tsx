@@ -26,27 +26,46 @@ import { soundFx } from '../utils/audio';
 interface RoleGateViewProps {
   onSelectRole: (role: ActiveRole) => void;
   onOpenTrail?: () => void;
-  organizerPin?: string;
+  studentProfile?: any;
+  organizerProfile?: any;
+  onOpenStudentSignIn?: () => void;
+  onOpenOrganizerSignIn?: () => void;
 }
 
 export const RoleGateView: React.FC<RoleGateViewProps> = ({
   onSelectRole,
   onOpenTrail,
-  organizerPin = '1898',
+  studentProfile,
+  organizerProfile,
+  onOpenStudentSignIn,
+  onOpenOrganizerSignIn,
 }) => {
   const [view, setView] = useState<'gate' | 'other' | 'pin'>('gate');
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
+  const handleStudentClick = () => {
+    if (!studentProfile && onOpenStudentSignIn) {
+      onOpenStudentSignIn();
+    } else {
+      onSelectRole('student');
+    }
+  };
+
   const handleOrganizerClick = () => {
-    setView('pin');
-    setPinInput('');
-    setPinError(false);
+    if (!organizerProfile && onOpenOrganizerSignIn) {
+      onOpenOrganizerSignIn();
+    } else {
+      setView('pin');
+      setPinInput('');
+      setPinError(false);
+    }
   };
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput.trim() === organizerPin || pinInput.trim() === '1234') {
+    const targetPin = organizerProfile?.pin;
+    if (targetPin && pinInput.trim() === targetPin) {
       soundFx.playConfirm();
       onSelectRole('organizer');
     } else {
@@ -125,7 +144,7 @@ export const RoleGateView: React.FC<RoleGateViewProps> = ({
             {/* Student Button */}
             <div className="w-full">
               <button
-                onClick={() => onSelectRole('student')}
+                onClick={handleStudentClick}
                 className="w-full group relative p-4 rounded-xl bg-gradient-to-r from-[#1B2257]/80 via-[#2A1B4E]/80 to-[#1B2257]/80 border border-[#E8D9B0]/40 hover:border-[#E8D9B0] shadow-lg hover:shadow-[0_0_25px_rgba(232,217,176,0.25)] flex items-center justify-between transition-all duration-200"
               >
                 <div className="flex items-center gap-4">
@@ -227,7 +246,7 @@ export const RoleGateView: React.FC<RoleGateViewProps> = ({
               Organizer Desk Authentication
             </h3>
             <p className="font-sans text-xs text-[#E8D9B0]/75 text-center mt-1 max-w-sm">
-              Please enter your 4-digit council PIN to access the Organizer Command Center. (Default: 1898)
+              Please enter your 4-digit council PIN to access the Organizer Command Center.
             </p>
 
             <form onSubmit={handlePinSubmit} className="w-full max-w-xs mt-6 flex flex-col items-center gap-4">
@@ -248,7 +267,7 @@ export const RoleGateView: React.FC<RoleGateViewProps> = ({
 
               {pinError && (
                 <span className="text-xs text-red-400 font-sans">
-                  Invalid PIN. Please try again (Hint: 1898)
+                  Invalid PIN. Please try again.
                 </span>
               )}
 
@@ -272,6 +291,19 @@ export const RoleGateView: React.FC<RoleGateViewProps> = ({
                   Verify
                 </OrnateButton>
               </div>
+
+              {onOpenOrganizerSignIn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView('gate');
+                    onOpenOrganizerSignIn();
+                  }}
+                  className="text-[11px] font-sans text-[#E8D9B0]/75 hover:text-[#FFF6E5] underline mt-1"
+                >
+                  Sign in with new organizer credentials
+                </button>
+              )}
             </form>
           </motion.div>
         )}

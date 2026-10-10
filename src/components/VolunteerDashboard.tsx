@@ -9,7 +9,7 @@ import { OrnateButton } from './ui/OrnateButton';
 import { OrnateFrame } from './ui/OrnateFrame';
 import { ThornDivider } from './ui/ThornDivider';
 import { QRCodeDisplay } from './QRCodeDisplay';
-import { EventCategoryShowcase } from './EventCategoryShowcase';
+import { EventQuestCard } from './EventQuestCard';
 import {
   HeartHandshake,
   ShieldCheck,
@@ -26,6 +26,8 @@ interface VolunteerDashboardProps {
   events: CampusEvent[];
   onShowToast: (title: string, message: string, type: 'success' | 'error' | 'info') => void;
   onSwitchRole: (role: any) => void;
+  onSelectEvent?: (event: CampusEvent) => void;
+  onRegisterEvent?: (event: CampusEvent) => void;
 }
 
 const AVAILABLE_ROLES: { id: VolunteerRoleType; label: string; desc: string }[] = [
@@ -50,6 +52,8 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
   events,
   onShowToast,
   onSwitchRole,
+  onSelectEvent,
+  onRegisterEvent,
 }) => {
   const [applications, setApplications] = useState<VolunteerApplication[]>(
     dataService.getVolunteerApplications()
@@ -343,7 +347,7 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
                     required
                     value={formData.collegeEmail}
                     onChange={(e) => setFormData({ ...formData, collegeEmail: e.target.value })}
-                    placeholder="name@campuspost.edu"
+                    placeholder="you@festora.edu"
                     className="p-3 rounded-lg bg-[#10142E] border border-[#E8D9B0]/30 text-sm text-[#FFF6E5] focus:outline-none focus:border-[#E8D9B0]"
                   />
                 </div>
@@ -581,11 +585,43 @@ export const VolunteerDashboard: React.FC<VolunteerDashboardProps> = ({
         </OrnateFrame>
       )}
 
-      {/* Types of Events Section to keep all areas rich and populated (PART 2.3) */}
-      <EventCategoryShowcase
-        events={events}
-        onSelectCategory={() => onSwitchRole('student')}
-      />
+      {/* Festival Events & Notices Showcase */}
+      <section className="mt-8 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#E8D9B0]/20 pb-3">
+          <div>
+            <span className="font-eyebrow text-xs uppercase tracking-widest text-[#E8D9B0]">
+              Official Festival Notice Board
+            </span>
+            <h3 className="font-display font-bold text-xl sm:text-2xl text-gold-gradient uppercase">
+              Festival Events & Schedules
+            </h3>
+          </div>
+          <button
+            onClick={() => onSwitchRole('student')}
+            className="text-xs font-sans text-[#E8D9B0] hover:text-[#FFF6E5] underline flex items-center gap-1"
+          >
+            <span>Open Notice Sanctuary →</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((ev) => (
+            <EventQuestCard
+              key={ev.id}
+              event={ev}
+              onOpenDetails={() => {
+                if (onSelectEvent) onSelectEvent(ev);
+                else onSwitchRole('student');
+              }}
+              onQuickRegister={() => {
+                if (onRegisterEvent) onRegisterEvent(ev);
+                else onSwitchRole('student');
+              }}
+              onShowToast={(title, desc) => onShowToast(title, desc || '', 'success')}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

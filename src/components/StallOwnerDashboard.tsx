@@ -9,7 +9,7 @@ import { dataService } from '../services/dataService';
 import { OrnateButton } from './ui/OrnateButton';
 import { OrnateFrame } from './ui/OrnateFrame';
 import { ThornDivider } from './ui/ThornDivider';
-import { EventCategoryShowcase } from './EventCategoryShowcase';
+import { EventQuestCard } from './EventQuestCard';
 import {
   Store,
   MapPin,
@@ -27,6 +27,8 @@ interface StallOwnerDashboardProps {
   events: CampusEvent[];
   onShowToast: (title: string, message: string, type: 'success' | 'error' | 'info') => void;
   onSwitchRole: (role: any) => void;
+  onSelectEvent?: (event: CampusEvent) => void;
+  onRegisterEvent?: (event: CampusEvent) => void;
 }
 
 const STALL_TYPES: { id: StallType; label: string }[] = [
@@ -54,6 +56,8 @@ export const StallOwnerDashboard: React.FC<StallOwnerDashboardProps> = ({
   events,
   onShowToast,
   onSwitchRole,
+  onSelectEvent,
+  onRegisterEvent,
 }) => {
   const [stalls, setStalls] = useState<StallRequest[]>(dataService.getStallRequests());
   const [showForm, setShowForm] = useState(false);
@@ -382,11 +386,43 @@ export const StallOwnerDashboard: React.FC<StallOwnerDashboardProps> = ({
         </OrnateFrame>
       )}
 
-      {/* Types of Events Section to keep all areas rich and populated (PART 2.3) */}
-      <EventCategoryShowcase
-        events={events}
-        onSelectCategory={() => onSwitchRole('student')}
-      />
+      {/* Festival Events & Schedules Arena */}
+      <section className="mt-8 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#E8D9B0]/20 pb-3">
+          <div>
+            <span className="font-eyebrow text-xs uppercase tracking-widest text-[#E8D9B0]">
+              Official Festival Notice Board
+            </span>
+            <h3 className="font-display font-bold text-xl sm:text-2xl text-gold-gradient uppercase">
+              Festival Events & Footfall Venues
+            </h3>
+          </div>
+          <button
+            onClick={() => onSwitchRole('student')}
+            className="text-xs font-sans text-[#E8D9B0] hover:text-[#FFF6E5] underline flex items-center gap-1"
+          >
+            <span>Open Notice Sanctuary →</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {events.map((ev) => (
+            <EventQuestCard
+              key={ev.id}
+              event={ev}
+              onOpenDetails={() => {
+                if (onSelectEvent) onSelectEvent(ev);
+                else onSwitchRole('student');
+              }}
+              onQuickRegister={() => {
+                if (onRegisterEvent) onRegisterEvent(ev);
+                else onSwitchRole('student');
+              }}
+              onShowToast={(title, desc) => onShowToast(title, desc || '', 'success')}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

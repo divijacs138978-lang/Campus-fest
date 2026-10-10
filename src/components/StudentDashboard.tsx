@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CampusEvent, CampusPass, StudentProfile } from '../types';
 import { dataService } from '../services/dataService';
-import { EnvelopeEventCard } from './EnvelopeEventCard';
+import { EventQuestCard } from './EventQuestCard';
 import { PassContainer } from './passes/PassContainer';
 import { CinemaSeatMap } from './CinemaSeatMap';
-import { EventCategoryShowcase } from './EventCategoryShowcase';
 import { EmptyNoticeState } from './EmptyNoticeState';
 import { ScrollStory } from './ScrollStory';
 import { OrnateButton } from './ui/OrnateButton';
@@ -17,6 +16,8 @@ import {
   Clock,
   Sparkles,
   BookOpen,
+  LogOut,
+  LogIn,
 } from 'lucide-react';
 import { soundFx } from '../utils/audio';
 
@@ -31,6 +32,8 @@ interface Props {
   onUpdatePassTemplate: (passId: string, template: any) => void;
   onShowToast?: (title: string, desc?: string, type?: 'success' | 'reminder') => void;
   onOpenTrail?: () => void;
+  onOpenSignIn?: () => void;
+  onSignOut?: () => void;
 }
 
 export const StudentDashboard: React.FC<Props> = ({
@@ -44,20 +47,38 @@ export const StudentDashboard: React.FC<Props> = ({
   onUpdatePassTemplate,
   onShowToast,
   onOpenTrail,
+  onOpenSignIn,
+  onSignOut,
 }) => {
   const [activeTab, setActiveTab] = useState<'board' | 'story' | 'passes' | 'profile'>('board');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPassId, setSelectedPassId] = useState<string>(myPasses[0]?.id || '');
 
-  // Profile form state
-  const [profName, setProfName] = useState(studentProfile?.name || 'Aarav Sharma');
-  const [profEmail, setProfEmail] = useState(studentProfile?.collegeEmail || 'aarav.sharma@festora.edu');
-  const [profRoll, setProfRoll] = useState(studentProfile?.rollNumber || '22CS084');
+  // Profile form state (no hardcoded fake defaults)
+  const [profName, setProfName] = useState(studentProfile?.name || '');
+  const [profEmail, setProfEmail] = useState(studentProfile?.collegeEmail || '');
+  const [profRoll, setProfRoll] = useState(studentProfile?.rollNumber || '');
   const [profDept, setProfDept] = useState(studentProfile?.department || 'Computer Science');
-  const [profYear, setProfYear] = useState(studentProfile?.year || '3rd Year');
-  const [profPhone, setProfPhone] = useState(studentProfile?.phone || '+91 98765 43210');
+  const [profYear, setProfYear] = useState(studentProfile?.year || '1st Year');
+  const [profPhone, setProfPhone] = useState(studentProfile?.phone || '');
   const [profileSavedToast, setProfileSavedToast] = useState(false);
+
+  useEffect(() => {
+    if (studentProfile) {
+      setProfName(studentProfile.name || '');
+      setProfEmail(studentProfile.collegeEmail || '');
+      setProfRoll(studentProfile.rollNumber || '');
+      setProfDept(studentProfile.department || 'Computer Science');
+      setProfYear(studentProfile.year || '1st Year');
+      setProfPhone(studentProfile.phone || '');
+    } else {
+      setProfName('');
+      setProfEmail('');
+      setProfRoll('');
+      setProfPhone('');
+    }
+  }, [studentProfile]);
 
   const activePass = myPasses.find((p) => p.id === selectedPassId) || myPasses[0];
   const activePassEvent = events.find((e) => e.id === activePass?.eventId);
@@ -104,9 +125,42 @@ export const StudentDashboard: React.FC<Props> = ({
           <h1 className="font-display font-black text-3xl sm:text-5xl text-gold-gradient uppercase tracking-wider mt-1">
             FESTORA NOTICES
           </h1>
-          <p className="font-eyebrow text-sm text-[#FFF6E5]/80 mt-1">
-            Attendee Profile: <span className="font-bold underline text-[#E8D9B0]">{studentProfile?.name || profName}</span> ({studentProfile?.rollNumber || profRoll})
-          </p>
+          {studentProfile ? (
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+              <p className="font-eyebrow text-sm text-[#FFF6E5]/80">
+                Attendee Profile:{' '}
+                <span className="font-bold underline text-[#E8D9B0]">
+                  {studentProfile.name}
+                </span>{' '}
+                ({studentProfile.rollNumber})
+              </p>
+              {onSignOut && (
+                <button
+                  onClick={onSignOut}
+                  className="inline-flex items-center gap-1 text-[11px] font-sans px-2.5 py-0.5 rounded-full bg-red-950/70 border border-red-500/40 text-red-200 hover:bg-red-900/80 transition-colors"
+                  title="Sign out of student account"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span>Sign Out</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+              <p className="font-eyebrow text-sm text-[#FFF6E5]/70">
+                Browse notices freely • Sign in to claim digital passes
+              </p>
+              {onOpenSignIn && (
+                <button
+                  onClick={onOpenSignIn}
+                  className="inline-flex items-center gap-1 text-[11px] font-sans font-semibold px-3 py-1 rounded-full btn-crimson-pill text-[#FFF6E5] shadow-sm"
+                >
+                  <LogIn className="w-3 h-3" />
+                  <span>Sign In</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Tab Controls */}
@@ -206,21 +260,19 @@ export const StudentDashboard: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* Grid of Pinned Posters */}
+          {/* Grid of Real Event Quest Cards (Unified single card system) */}
           {filteredEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredEvents.map((ev, idx) => {
+              {filteredEvents.map((ev) => {
                 const userPass = myPasses.find((p) => p.eventId === ev.id);
-                const rotations = ['rotate-[-1deg]', 'rotate-[1deg]', 'rotate-0', 'rotate-[-1.5deg]'];
 
                 return (
-                  <EnvelopeEventCard
+                  <EventQuestCard
                     key={ev.id}
                     event={ev}
                     isRegistered={!!userPass}
                     onOpenDetails={() => onSelectEvent(ev)}
                     onQuickRegister={() => onQuickRegister(ev)}
-                    rotation={rotations[idx % rotations.length]}
                     onShowToast={onShowToast}
                   />
                 );
@@ -237,12 +289,6 @@ export const StudentDashboard: React.FC<Props> = ({
               }}
             />
           )}
-
-          {/* Types of Events Showcase (PART 2.3) */}
-          <EventCategoryShowcase
-            events={events}
-            onSelectCategory={(cat) => setCategoryFilter(cat)}
-          />
         </div>
       )}
 
@@ -399,104 +445,149 @@ export const StudentDashboard: React.FC<Props> = ({
             </div>
           </div>
 
-          <p className="font-eyebrow text-xs text-[#FFF6E5]/80 mb-5">
-            These credentials autofill all your event registrations so you can claim cryptographic passes in one click.
-          </p>
-
-          <form onSubmit={handleSaveProfile} className="space-y-4 font-sans text-xs">
-            <div>
-              <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Full Student Name *</label>
-              <input
-                type="text"
-                required
-                value={profName}
-                onChange={(e) => setProfName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Roll Number / ID *</label>
-                <input
-                  type="text"
-                  required
-                  value={profRoll}
-                  onChange={(e) => setProfRoll(e.target.value.toUpperCase())}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#E04A7B] font-bold focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
-                />
+          {!studentProfile ? (
+            <div className="py-8 text-center space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#1B2257] border border-[#E8D9B0]/30 flex items-center justify-center mx-auto text-[#E8D9B0]">
+                <User className="w-7 h-7" />
               </div>
-
-              <div>
-                <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">College Email *</label>
-                <input
-                  type="email"
-                  required
-                  value={profEmail}
-                  onChange={(e) => setProfEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Department</label>
-                <select
-                  value={profDept}
-                  onChange={(e) => setProfDept(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60"
-                >
-                  <option value="Computer Science">Computer Science</option>
-                  <option value="Information Technology">Information Tech</option>
-                  <option value="Electronics & Comm.">Electronics (ECE)</option>
-                  <option value="Mechanical Eng.">Mechanical Eng.</option>
-                  <option value="Civil Engineering">Civil Engineering</option>
-                  <option value="Biotechnology">Biotechnology</option>
-                  <option value="Management Studies">Management Studies</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Academic Year</label>
-                <select
-                  value={profYear}
-                  onChange={(e) => setProfYear(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60"
-                >
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                  <option value="4th Year">4th Year</option>
-                  <option value="Postgraduate">Postgraduate</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Contact Phone Number</label>
-              <input
-                type="tel"
-                value={profPhone}
-                onChange={(e) => setProfPhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
-              />
-            </div>
-
-            <div className="pt-4 flex items-center justify-between border-t border-[#E8D9B0]/20">
-              {profileSavedToast ? (
-                <span className="text-emerald-400 font-mono text-xs flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" /> Profile Updated
-                </span>
-              ) : (
-                <span className="text-[#FFF6E5]/60 text-[11px]">Auto-saved locally</span>
+              <h4 className="font-display font-bold text-lg text-[#FFF6E5]">
+                Sign In to View Your Profile
+              </h4>
+              <p className="font-sans text-xs text-[#FFF6E5]/70 max-w-sm mx-auto">
+                Connect your student credentials to manage claimed passes, view seat assignments, and enjoy quick one-click event registrations.
+              </p>
+              {onOpenSignIn && (
+                <div className="pt-2">
+                  <OrnateButton variant="primary" onClick={onOpenSignIn}>
+                    Sign In to the Campus
+                  </OrnateButton>
+                </div>
               )}
-
-              <OrnateButton type="submit" variant="primary" size="md">
-                Save Profile
-              </OrnateButton>
             </div>
-          </form>
+          ) : (
+            <div>
+              <p className="font-eyebrow text-xs text-[#FFF6E5]/80 mb-5">
+                These credentials autofill all your event registrations so you can claim cryptographic passes in one click.
+              </p>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4 font-sans text-xs">
+                <div>
+                  <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">
+                    Full Student Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={profName}
+                    onChange={(e) => setProfName(e.target.value)}
+                    placeholder="Your full name"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">
+                      Roll Number / ID *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={profRoll}
+                      onChange={(e) => setProfRoll(e.target.value.toUpperCase())}
+                      placeholder="e.g. 24CS101"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#E04A7B] font-bold focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">
+                      College Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={profEmail}
+                      onChange={(e) => setProfEmail(e.target.value)}
+                      placeholder="you@college.edu"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Department</label>
+                    <select
+                      value={profDept}
+                      onChange={(e) => setProfDept(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60"
+                    >
+                      <option value="Computer Science">Computer Science</option>
+                      <option value="Information Technology">Information Tech</option>
+                      <option value="Electronics & Comm.">Electronics (ECE)</option>
+                      <option value="Mechanical Eng.">Mechanical Eng.</option>
+                      <option value="Civil Engineering">Civil Engineering</option>
+                      <option value="Biotechnology">Biotechnology</option>
+                      <option value="Management Studies">Management Studies</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Academic Year</label>
+                    <select
+                      value={profYear}
+                      onChange={(e) => setProfYear(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60"
+                    >
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                      <option value="3rd Year">3rd Year</option>
+                      <option value="4th Year">4th Year</option>
+                      <option value="Postgraduate">Postgraduate</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-medium text-[#E8D9B0] uppercase text-[11px]">Contact Phone Number</label>
+                  <input
+                    type="tel"
+                    value={profPhone}
+                    onChange={(e) => setProfPhone(e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/25 text-[#FFF6E5] font-medium focus:outline-none focus:border-[#E8D9B0]/60 transition-colors shadow-inner"
+                  />
+                </div>
+
+                <div className="pt-4 flex items-center justify-between border-t border-[#E8D9B0]/20 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    {profileSavedToast ? (
+                      <span className="text-emerald-400 font-mono text-xs flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4" /> Profile Updated
+                      </span>
+                    ) : (
+                      <span className="text-[#FFF6E5]/60 text-[11px]">Auto-saved locally</span>
+                    )}
+
+                    {onSignOut && (
+                      <button
+                        type="button"
+                        onClick={onSignOut}
+                        className="text-[11px] text-red-300 hover:text-red-200 underline"
+                      >
+                        Sign Out
+                      </button>
+                    )}
+                  </div>
+
+                  <OrnateButton type="submit" variant="primary" size="md">
+                    Save Profile
+                  </OrnateButton>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       )}
     </div>

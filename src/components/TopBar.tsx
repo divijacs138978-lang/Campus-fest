@@ -33,6 +33,8 @@ interface Props {
   canGoForward?: boolean;
   onGoBack?: () => void;
   onGoForward?: () => void;
+  onOpenStudentSignIn?: () => void;
+  onSignOut?: () => void;
 }
 
 export const TopBar: React.FC<Props> = ({
@@ -48,6 +50,8 @@ export const TopBar: React.FC<Props> = ({
   canGoForward,
   onGoBack,
   onGoForward,
+  onOpenStudentSignIn,
+  onSignOut,
 }) => {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isMuted, setIsMuted] = useState(soundFx.getMuted());
@@ -306,6 +310,19 @@ export const TopBar: React.FC<Props> = ({
             <Sparkles className="w-3.5 h-3.5 text-[#E8D9B0]" />
             <span>Events</span>
           </button>
+
+          {/* Student Profile Quick Access / Sign In */}
+          {activeRole === 'student' && !studentProfile && onOpenStudentSignIn && (
+            <button
+              onClick={() => {
+                soundFx.playClick();
+                onOpenStudentSignIn();
+              }}
+              className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold btn-crimson-pill text-[#FFF6E5]"
+            >
+              <span>Sign In</span>
+            </button>
+          )}
 
           {/* Audio Mute Toggle Button (PART 5.B) */}
           <button
