@@ -41,7 +41,7 @@ export const PassContainer: React.FC<Props> = ({
 
   const handleShare = async () => {
     const shareData = {
-      title: `Campus Post Entry Pass — ${pass.eventTitle}`,
+      title: `Festora Entry Pass — ${pass.eventTitle}`,
       text: `I'm registered for ${pass.eventTitle}! Entry Code: ${pass.code}`,
       url: window.location.href,
     };

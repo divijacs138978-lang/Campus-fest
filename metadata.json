@@ -1,6 +1,6 @@
 {
-  "name": "CAMPUS POST",
-  "description": "College event registration, notice board, and attendance check-in portal.",
+  "name": "Festora",
+  "description": "Festora college event registration, notice board, and attendance check-in portal.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

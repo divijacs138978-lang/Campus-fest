@@ -2,6 +2,7 @@ import React from 'react';
 import { CampusPass } from '../../types';
 import { QRCodeDisplay } from '../QRCodeDisplay';
 import { PostageStamp, RoundRubberStamp } from '../PostalDecorations';
+import { ParticipantPortrait } from '../ParticipantPortrait';
 
 interface Props {
   pass: CampusPass;
@@ -17,21 +18,28 @@ export const TicketStubPass: React.FC<Props> = ({ pass, className = '' }) => {
         <div className="flex-1 flex flex-col justify-between space-y-3">
           <div className="border-b-2 border-dashed border-[#2A1A14]/20 pb-2">
             <span className="font-typewriter text-[10px] text-[#8E2A2A] font-black tracking-widest uppercase">
-              ★ CAMPUS POST OFFICIAL EVENT TICKET ★
+              ★ FESTORA OFFICIAL EVENT TICKET ★
             </span>
             <h3 className="font-display font-black text-2xl sm:text-3xl text-[#2A1A14] uppercase leading-tight mt-1">
               {pass.eventTitle}
             </h3>
           </div>
 
-          {/* Student Info */}
-          <div className="space-y-1 font-typewriter">
-            <div className="text-xs text-[#2A1A14]">
-              <span className="opacity-70 font-bold">NAME: </span>
-              <span className="font-display font-black text-base">{pass.studentName}</span>
-            </div>
-            <div className="text-xs text-[#8E2A2A] font-black">
-              ROLL NO: {pass.studentRollNumber} • {pass.studentDepartment}
+          {/* Student Info & Avatar */}
+          <div className="flex items-center gap-3 bg-[#FFF6E5] p-2.5 rounded-xl border-2 border-[#2A1A14]">
+            <ParticipantPortrait
+              size="sm"
+              traits={pass.characterTraits}
+              seedCode={pass.code}
+              celebrate={pass.checkedIn}
+            />
+            <div className="space-y-0.5 font-typewriter min-w-0 flex-1">
+              <div className="text-xs text-[#2A1A14]">
+                <span className="font-display font-black text-sm block truncate">{pass.studentName}</span>
+              </div>
+              <div className="text-[11px] text-[#8E2A2A] font-black truncate">
+                {pass.studentRollNumber} • {pass.studentDepartment}
+              </div>
             </div>
           </div>
 
@@ -41,14 +49,14 @@ export const TicketStubPass: React.FC<Props> = ({ pass, className = '' }) => {
               {pass.eventDate} • {pass.eventTime}
             </div>
 
-            <div className="bg-[#A98258]/30 border-2 border-[#2A1A14] p-2.5 rounded-xl font-typewriter text-xs text-[#2A1A14]">
+            <div className="bg-[#A98258]/30 border-2 border-[#2A1A14] p-2 rounded-xl font-typewriter text-xs text-[#2A1A14]">
               <span className="font-bold block truncate">{pass.eventVenue}</span>
             </div>
           </div>
 
           {/* Bottom Seal */}
           <div className="pt-2 flex items-center justify-between font-typewriter text-xs">
-            <span className="font-black text-[#5B7A3A]">SEAT #{pass.seatNo} VERIFIED</span>
+            <span className="font-black text-[#5B7A3A]">SEAT {pass.seatLabel || `#${pass.seatNo}`} VERIFIED</span>
             <span className="text-[10px] opacity-70">VALID FOR SINGLE ENTRY</span>
           </div>
         </div>

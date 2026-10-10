@@ -95,7 +95,7 @@ export const StoryFeedbackModal: React.FC<Props> = ({
   const handleCopyPostcard = () => {
     postalSoundFx.playTypewriterTick();
     navigator.clipboard.writeText(
-      `I ATTENDED ${event.title} (${event.date}) // VERIFIED ON CAMPUS POST (Pass: ${pass.code})`
+      `I ATTENDED ${event.title} (${event.date}) // VERIFIED ON FESTORA (Pass: ${pass.code})`
     );
     setCopiedPostcard(true);
     setTimeout(() => setCopiedPostcard(false), 2000);
@@ -110,7 +110,7 @@ export const StoryFeedbackModal: React.FC<Props> = ({
           <div className="border-b-2 border-dashed border-[#2A1A14]/30 pb-3 flex items-center justify-between">
             <div>
               <span className="text-[10px] text-[#8E2A2A] font-black tracking-widest uppercase block">
-                CAMPUS POST // ATTENDEE REPLY CARD
+                FESTORA // ATTENDEE REPLY CARD
               </span>
               <span className="font-display font-black text-sm text-[#2A1A14] uppercase truncate block max-w-[280px]">
                 {event.title}
@@ -360,7 +360,7 @@ export const StoryFeedbackModal: React.FC<Props> = ({
                   <div className="relative mx-auto w-full max-w-sm rounded-2xl p-4 bg-[#FFF6E5] border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] text-left select-none space-y-2">
                     <div className="flex items-center justify-between pb-1 border-b border-[#2A1A14]/20">
                       <span className="text-[9px] text-[#8E2A2A] font-bold tracking-widest uppercase">
-                        CAMPUS POST // ATTENDANCE SOUVENIR
+                        FESTORA // ATTENDANCE SOUVENIR
                       </span>
                       <span className="text-xs font-black text-[#5B7A3A]">
                         ★ {overallRating}/5 STAMPS

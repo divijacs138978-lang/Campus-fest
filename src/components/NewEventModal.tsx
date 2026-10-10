@@ -103,7 +103,7 @@ export const NewEventModal: React.FC<Props> = ({ initialEvent, onClose, onSaveEv
     const payload = {
       ...(initialEvent ? { id: initialEvent.id } : {}),
       title: title.trim().toUpperCase(),
-      description: description.trim() || 'Official college event on the Campus Post bulletin board.',
+      description: description.trim() || 'Official college event on the Festora bulletin board.',
       category,
       date: date.trim() || 'NOVEMBER 2026',
       dayLabel: dayLabel.trim().toUpperCase() || 'SATURDAY',
@@ -113,10 +113,10 @@ export const NewEventModal: React.FC<Props> = ({ initialEvent, onClose, onSaveEv
       capacity: Number(capacity) || 100,
       posterColor,
       organizerClub: organizerClub.trim() || 'Campus Committee',
-      organizerEmail: organizerEmail.trim() || 'organizer@campuspost.edu',
+      organizerEmail: organizerEmail.trim() || 'organizer@festora.edu',
       eligibilityYears: selectedYears,
       eligibilityDepartments: selectedDepts,
-      tags: [category.toUpperCase(), `${capacity} SPOTS`, 'CAMPUS POST'],
+      tags: [category.toUpperCase(), `${capacity} SPOTS`, 'FESTORA'],
       status: initialEvent?.status || 'OPEN',
     };
 
@@ -137,7 +137,7 @@ export const NewEventModal: React.FC<Props> = ({ initialEvent, onClose, onSaveEv
                   {isEditing ? 'EDIT NOTICE POSTING' : 'PIN NEW EVENT POSTING'}
                 </span>
                 <span className="font-typewriter text-[10px] text-[#8E2A2A] font-bold uppercase tracking-widest">
-                  CAMPUS POST BULLETIN BOARD
+                  FESTORA BULLETIN BOARD
                 </span>
               </div>
             </div>

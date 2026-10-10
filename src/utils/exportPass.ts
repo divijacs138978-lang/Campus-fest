@@ -54,7 +54,7 @@ export async function downloadPassAsPNG(pass: CampusPass, format: '9:16' | '1:1'
   // Header banner
   ctx.fillStyle = '#8E2A2A';
   ctx.font = 'bold 32px "Special Elite", monospace';
-  ctx.fillText('★ CAMPUS POST OFFICIAL EVENT PASS ★', letX + 50, letY + 80);
+  ctx.fillText('★ FESTORA OFFICIAL EVENT PASS ★', letX + 50, letY + 80);
 
   // Student Name
   ctx.fillStyle = '#2A1A14';
@@ -126,7 +126,7 @@ export async function downloadPassAsPNG(pass: CampusPass, format: '9:16' | '1:1'
 
     ctx.fillStyle = '#2A1A14';
     ctx.font = 'bold 26px "Special Elite", monospace';
-    ctx.fillText(`SEAT NO. #${pass.seatNo} • NON-TRANSFERABLE CAMPUS ENTRY`, width / 2, qrY + qrSize + 115);
+    ctx.fillText(`SEAT: ${pass.seatLabel || `NO. #${pass.seatNo}`} • NON-TRANSFERABLE CAMPUS ENTRY`, width / 2, qrY + qrSize + 115);
 
     ctx.fillStyle = 'rgba(42, 26, 20, 0.6)';
     ctx.font = 'italic 28px "Lora", serif';

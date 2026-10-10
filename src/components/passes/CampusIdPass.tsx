@@ -2,6 +2,7 @@ import React from 'react';
 import { CampusPass } from '../../types';
 import { QRCodeDisplay } from '../QRCodeDisplay';
 import { RoundRubberStamp, PostageStamp, PaperClip } from '../PostalDecorations';
+import { ParticipantPortrait } from '../ParticipantPortrait';
 
 interface Props {
   pass: CampusPass;
@@ -36,7 +37,7 @@ export const CampusIdPass: React.FC<Props> = ({ pass, className = '' }) => {
           <div className="flex items-start justify-between border-b-2 border-dashed border-[#2A1A14]/30 pb-3">
             <div>
               <span className="font-typewriter text-[9px] text-[#8E2A2A] font-black uppercase tracking-widest block">
-                ★ CAMPUS POST // STUDENT ACCESS ID ★
+                ★ FESTORA // STUDENT ACCESS ID ★
               </span>
               <span className="font-typewriter text-xs font-black text-[#2A1A14] block mt-0.5">
                 PASS #{pass.seatNo} • {pass.studentYear}
@@ -45,18 +46,28 @@ export const CampusIdPass: React.FC<Props> = ({ pass, className = '' }) => {
             <PostageStamp price="CAMPUS" title="ENTRY" color="#8E2A2A" className="w-10 h-12" />
           </div>
 
-          {/* Student Avatar + Roll Number & Department */}
+          {/* Student Portrait in Oval Gold Frame + Roll Number & Department */}
           <div className="flex items-center gap-3 bg-[#FFF6E5] p-3 rounded-xl border-2 border-[#2A1A14] shadow-[2px_2px_0px_#2A1A14]">
-            {/* Initials Avatar */}
-            <div className="w-14 h-14 rounded-xl bg-[#8E2A2A] text-[#FFF6E5] border-2 border-[#2A1A14] flex items-center justify-center font-display text-xl font-black shrink-0">
-              {initials}
+            {/* Procedural 3D Character Avatar in Ornate Frame */}
+            <div className="shrink-0">
+              <ParticipantPortrait
+                size="sm"
+                traits={pass.characterTraits}
+                seedCode={pass.code}
+                celebrate={pass.checkedIn}
+              />
             </div>
 
-            <div className="min-w-0 font-typewriter">
-              <span className="font-display font-black text-lg text-[#2A1A14] leading-tight block truncate">
-                {pass.studentName}
-              </span>
-              <span className="text-xs font-black text-[#8E2A2A] block">
+            <div className="min-w-0 font-typewriter flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-display font-black text-base text-[#2A1A14] leading-tight block truncate">
+                  {pass.studentName}
+                </span>
+                <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-[#8E2A2A] text-[#FFF6E5]">
+                  {pass.seatLabel || `SEAT #${pass.seatNo}`}
+                </span>
+              </div>
+              <span className="text-xs font-black text-[#8E2A2A] block mt-0.5">
                 ROLL: {pass.studentRollNumber}
               </span>
               <span className="text-[10px] text-[#2A1A14]/75 block truncate">

@@ -278,7 +278,7 @@ export const CAMPUS_STALLS: CampusStall[] = [
   },
   {
     id: 'stall-5',
-    name: 'Campus Post Official Merch Drop',
+    name: 'Festora Official Merch Drop',
     plotId: 'ML-01',
     zoneId: 'stop-merch-lane',
     category: 'Merch',

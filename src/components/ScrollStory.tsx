@@ -225,7 +225,7 @@ export const ScrollStory: React.FC<ScrollStoryProps> = ({
         )}
 
         {/* ================================================================
-            SCENE 0: HERO (ENTER THE WORLD OF CAMPUS POST)
+            SCENE 0: HERO (ENTER THE WORLD OF FESTORA)
             ================================================================ */}
         <motion.div
           style={{
@@ -256,7 +256,7 @@ export const ScrollStory: React.FC<ScrollStoryProps> = ({
             >
               ENTER THE WORLD OF <br className="hidden sm:inline" />
               <span className="text-[#FFF6E5] drop-shadow-[0_0_35px_rgba(232,217,176,0.35)]">
-                CAMPUS POST
+                FESTORA
               </span>
             </motion.h1>
 

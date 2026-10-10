@@ -1,22 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CampusEvent,
   CampusPass,
   ScanRecord,
   CampusFeedback,
   OrganizerProfile,
+  VolunteerApplication,
+  StallRequest,
+  SponsorPledge,
 } from '../types';
 import { dataService } from '../services/dataService';
+import { historyService } from '../services/historyService';
+import { useHistory } from '../hooks/useHistory';
 import { exportToCSV } from '../utils/exportCsv';
 import { QRCodeDisplay } from './QRCodeDisplay';
+import { CinemaSeatMap } from './CinemaSeatMap';
+import { EventCategoryShowcase } from './EventCategoryShowcase';
+import { EmptyNoticeState } from './EmptyNoticeState';
+import { ParticipantPortrait } from './ParticipantPortrait';
+import { OrnateButton } from './ui/OrnateButton';
+import { ThornDivider } from './ui/ThornDivider';
 import {
-  PostageStamp,
-  PointingHand,
-  ImportantStamp,
-  PaperClip,
-  RoundRubberStamp,
-} from './PostalDecorations';
-import {
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   PieChart,
@@ -26,6 +32,8 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
 } from 'recharts';
 import {
   Plus,
@@ -38,13 +46,22 @@ import {
   Share2,
   Sparkles,
   RefreshCw,
-  Play,
   Edit,
-  Eye,
   Check,
   AlertCircle,
   FileSpreadsheet,
+  Undo2,
+  Redo2,
+  Armchair,
+  Users,
+  Store,
+  Gem,
+  HeartHandshake,
+  TrendingUp,
+  Activity,
+  Layers,
 } from 'lucide-react';
+import { soundFx } from '../utils/audio';
 
 interface Props {
   events: CampusEvent[];
@@ -57,9 +74,17 @@ interface Props {
   onOpenNewEvent: () => void;
   onSelectPassToView: (pass: CampusPass) => void;
   onSelectEventToEdit: (event: CampusEvent) => void;
+  onShowToast?: (title: string, message: string, type: 'success' | 'error' | 'info') => void;
 }
 
-const PIE_COLORS = ['#5B7A3A', '#8E2A2A', '#A98258', '#2A1A14'];
+const CATEGORY_COLORS: Record<string, string> = {
+  Tech: '#38BDF8',
+  Cultural: '#E04A7B',
+  Sports: '#F59E0B',
+  Workshop: '#10B981',
+  Seminar: '#A855F7',
+  'Club Drive': '#E8D9B0',
+};
 
 export const OrganizerCommandCenter: React.FC<Props> = ({
   events,
@@ -72,61 +97,102 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
   onOpenNewEvent,
   onSelectPassToView,
   onSelectEventToEdit,
+  onShowToast,
 }) => {
   const [selectedEventId, setSelectedEventId] = useState<string>(events[0]?.id || '');
-  const [eventTab, setEventTab] = useState<'overview' | 'participants' | 'feedback' | 'posterQr'>('overview');
+  const [eventTab, setEventTab] = useState<'overview' | 'seatMap' | 'participants' | 'requests' | 'feedback' | 'posterQr'>('overview');
+  const [requestsSubTab, setRequestsSubTab] = useState<'volunteers' | 'stalls' | 'sponsors'>('volunteers');
 
   // Participants tab filters
   const [participantSearch, setParticipantSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'checkedIn' | 'notYet'>('all');
   const [deptFilter, setDeptFilter] = useState('ALL');
-  const [yearFilter, setYearFilter] = useState('ALL');
 
-  // Demo runner toast state
-  const [demoLog, setDemoLog] = useState<{
-    show: boolean;
-    title: string;
-    details: string;
-    firstScanStatus: string;
-    secondScanStatus: string;
-  } | null>(null);
+  // Live timer indicator
+  const [lastUpdated, setLastUpdated] = useState<string>(new Date().toLocaleTimeString());
 
-  const [copiedLink, setCopiedLink] = useState(false);
+  // Undo/Redo integration
+  const { canUndo, canRedo, undoDesc, redoDesc, undo, redo } = useHistory(onRefreshData);
+
+  useEffect(() => {
+    setLastUpdated(new Date().toLocaleTimeString());
+  }, [events, passes, recentScans]);
 
   const currentEvent = events.find((e) => e.id === selectedEventId) || events[0];
   const eventPasses = passes.filter((p) => p.eventId === currentEvent?.id);
   const eventFeedbacks = feedbacks.filter((f) => f.eventId === currentEvent?.id);
 
-  // Stats calculation
+  // Requests data
+  const volunteers = dataService.getVolunteerApplications();
+  const stalls = dataService.getStallRequests();
+  const sponsors = dataService.getSponsorPledges();
+
+  const pendingVolunteers = volunteers.filter((v) => v.status === 'Pending').length;
+  const pendingStalls = stalls.filter((s) => s.status === 'Pending').length;
+  const pendingSponsors = sponsors.filter((sp) => sp.status === 'Pending').length;
+  const totalPendingRequests = pendingVolunteers + pendingStalls + pendingSponsors;
+
+  // Global counts for big number tiles
+  const totalRegisteredAll = passes.length;
+  const totalCheckedInAll = passes.filter((p) => p.checkedIn).length;
+  const totalCapacityAll = events.reduce((sum, e) => sum + e.capacity, 0);
+  const seatsLeftAll = Math.max(0, totalCapacityAll - totalRegisteredAll);
+  const overallCheckinRate = totalRegisteredAll > 0 ? Math.round((totalCheckedInAll / totalRegisteredAll) * 100) : 0;
+  const liveEventsCount = events.filter((e) => e.status === 'LIVE' || e.status === 'OPEN').length;
+
+  // Event specific stats
   const totalRegistered = currentEvent?.registeredCount || 0;
   const totalCheckedIn = currentEvent?.checkedInCount || 0;
-  const spotsLeft = Math.max(0, (currentEvent?.capacity || 0) - totalRegistered);
   const attendanceRate = totalRegistered > 0 ? Math.round((totalCheckedIn / totalRegistered) * 100) : 0;
-  const noShows = Math.max(0, totalRegistered - totalCheckedIn);
 
-  // Chart 1: Check-in Donut Data
-  const donutData = [
-    { name: 'Checked-in', value: totalCheckedIn },
-    { name: 'Pending', value: noShows },
+  // --- CHART 1: Registrations Over Time (Cumulative Area Chart) ---
+  const timelineData = [
+    { time: '09:00', registrations: Math.round(totalRegistered * 0.15) },
+    { time: '11:00', registrations: Math.round(totalRegistered * 0.35) },
+    { time: '13:00', registrations: Math.round(totalRegistered * 0.58) },
+    { time: '15:00', registrations: Math.round(totalRegistered * 0.78) },
+    { time: '17:00', registrations: Math.round(totalRegistered * 0.92) },
+    { time: 'Now', registrations: totalRegistered },
   ];
 
-  // Chart 2: Department breakdown
-  const deptCountMap: Record<string, number> = {};
-  eventPasses.forEach((p) => {
-    deptCountMap[p.studentDepartment] = (deptCountMap[p.studentDepartment] || 0) + 1;
+  // --- CHART 2: Registrations by Category (Donut Chart) ---
+  const categoryCounts: Record<string, number> = {};
+  events.forEach((ev) => {
+    categoryCounts[ev.category] = (categoryCounts[ev.category] || 0) + ev.registeredCount;
   });
-  const deptChartData = Object.entries(deptCountMap).map(([name, count]) => ({
-    name: name.slice(0, 14),
-    count,
+  const categoryDonutData = Object.entries(categoryCounts).map(([cat, count]) => ({
+    name: cat,
+    value: count,
+    color: CATEGORY_COLORS[cat] || '#E8D9B0',
   }));
 
-  // Filtered participants
-  const filteredParticipants = eventPasses.filter((p) => {
+  // --- CHART 3: Seats Filled per Event (Stacked Horizontal Bars) ---
+  const seatsStackedData = events.slice(0, 5).map((ev) => {
+    const checked = ev.checkedInCount;
+    const registeredOnly = Math.max(0, ev.registeredCount - checked);
+    const free = Math.max(0, ev.capacity - ev.registeredCount);
+    return {
+      name: ev.title.length > 18 ? ev.title.slice(0, 16) + '...' : ev.title,
+      checkedIn: checked,
+      registered: registeredOnly,
+      free: free,
+    };
+  });
+
+  // --- CHART 4: Check-in Rate Radial Gauge ---
+  const radialGaugeData = [
+    {
+      name: 'Admitted',
+      value: attendanceRate,
+      fill: '#10B981',
+    },
+  ];
+
+  // Filtered participants list
+  const filteredPasses = eventPasses.filter((p) => {
     if (statusFilter === 'checkedIn' && !p.checkedIn) return false;
     if (statusFilter === 'notYet' && p.checkedIn) return false;
     if (deptFilter !== 'ALL' && p.studentDepartment !== deptFilter) return false;
-    if (yearFilter !== 'ALL' && p.studentYear !== yearFilter) return false;
-
     if (participantSearch.trim()) {
       const q = participantSearch.toLowerCase();
       return (
@@ -138,21 +204,192 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
     return true;
   });
 
-  // Action: Manual check-in
-  const handleManualCheckIn = (code: string) => {
-    dataService.checkInCode(code, currentEvent?.id);
-    onRefreshData();
-  };
+  // Unique departments for filter
+  const departments = Array.from(new Set(eventPasses.map((p) => p.studentDepartment))).filter(Boolean);
 
-  // Action: Remove participant
-  const handleRemoveParticipant = (passId: string) => {
-    if (window.confirm('Are you sure you want to remove this participant and cancel their pass?')) {
-      dataService.removeParticipant(passId);
-      onRefreshData();
+  // Command-Pattern Wrapped Action: Manual Check-In with Undo/Redo
+  const handleCheckInWithHistory = (code: string) => {
+    const pass = passes.find((p) => p.code.toUpperCase() === code.trim().toUpperCase());
+    const studentDesc = pass ? `${pass.studentName} (${pass.seatLabel || pass.code})` : code;
+
+    historyService.execute({
+      description: `Check-in of ${studentDesc}`,
+      execute: () => {
+        dataService.checkInCode(code, currentEvent?.id);
+        soundFx.playCheckin();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.undoCheckIn(code);
+        onRefreshData();
+      },
+    });
+
+    if (onShowToast) {
+      onShowToast('Participant Admitted', `Checked in: ${studentDesc}`, 'success');
     }
   };
 
-  // Action: Export Participants CSV
+  const handleUndoCheckInWithHistory = (code: string) => {
+    const pass = passes.find((p) => p.code.toUpperCase() === code.trim().toUpperCase());
+    const studentDesc = pass ? `${pass.studentName} (${pass.seatLabel || pass.code})` : code;
+
+    historyService.execute({
+      description: `Undo check-in of ${studentDesc}`,
+      execute: () => {
+        dataService.undoCheckIn(code);
+        soundFx.playUndo();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.checkInCode(code, currentEvent?.id);
+        onRefreshData();
+      },
+    });
+
+    if (onShowToast) {
+      onShowToast('Check-in Reverted', `Undid entry for: ${studentDesc}`, 'info');
+    }
+  };
+
+  const handleApproveVolunteer = (volId: string) => {
+    const vol = volunteers.find((v) => v.id === volId);
+    if (!vol) return;
+    const oldStatus = vol.status;
+
+    historyService.execute({
+      description: `Approve Volunteer ${vol.name}`,
+      execute: () => {
+        dataService.updateVolunteerStatus(volId, 'Approved', [
+          'Main Gate Pass Validation (09:00 — 14:00)',
+          'Auditorium Escort Lead (15:00 — 19:00)',
+        ]);
+        soundFx.playConfirm();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.updateVolunteerStatus(volId, oldStatus);
+        onRefreshData();
+      },
+    });
+
+    if (onShowToast) onShowToast('Volunteer Approved', `${vol.name} assigned shifts.`, 'success');
+  };
+
+  const handleRejectVolunteer = (volId: string) => {
+    const vol = volunteers.find((v) => v.id === volId);
+    if (!vol) return;
+    const oldStatus = vol.status;
+
+    historyService.execute({
+      description: `Reject Volunteer ${vol.name}`,
+      execute: () => {
+        dataService.updateVolunteerStatus(volId, 'Rejected');
+        soundFx.playError();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.updateVolunteerStatus(volId, oldStatus);
+        onRefreshData();
+      },
+    });
+  };
+
+  const handleApproveStall = (stallId: string) => {
+    const s = stalls.find((x) => x.id === stallId);
+    if (!s) return;
+    const oldStatus = s.status;
+
+    historyService.execute({
+      description: `Approve Stall ${s.businessName}`,
+      execute: () => {
+        dataService.updateStallStatus(stallId, 'Approved', 'FC-04 (Food Court Quad)');
+        soundFx.playConfirm();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.updateStallStatus(stallId, oldStatus, undefined);
+        onRefreshData();
+      },
+    });
+
+    if (onShowToast) onShowToast('Stall Approved', `${s.businessName} allotted plot FC-04.`, 'success');
+  };
+
+  const handleRejectStall = (stallId: string) => {
+    const s = stalls.find((x) => x.id === stallId);
+    if (!s) return;
+    const oldStatus = s.status;
+
+    historyService.execute({
+      description: `Reject Stall ${s.businessName}`,
+      execute: () => {
+        dataService.updateStallStatus(stallId, 'Rejected');
+        soundFx.playError();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.updateStallStatus(stallId, oldStatus);
+        onRefreshData();
+      },
+    });
+  };
+
+  const handleApproveSponsor = (spId: string) => {
+    const sp = sponsors.find((x) => x.id === spId);
+    if (!sp) return;
+    const oldStatus = sp.status;
+
+    historyService.execute({
+      description: `Approve Sponsor ${sp.companyName}`,
+      execute: () => {
+        dataService.updateSponsorStatus(spId, 'Approved');
+        soundFx.playConfirm();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.updateSponsorStatus(spId, oldStatus);
+        onRefreshData();
+      },
+    });
+
+    if (onShowToast) onShowToast('Sponsor Confirmed', `${sp.companyName} added to Wall.`, 'success');
+  };
+
+  const handleRejectSponsor = (spId: string) => {
+    const sp = sponsors.find((x) => x.id === spId);
+    if (!sp) return;
+    const oldStatus = sp.status;
+
+    historyService.execute({
+      description: `Reject Sponsor ${sp.companyName}`,
+      execute: () => {
+        dataService.updateSponsorStatus(spId, 'Rejected');
+        soundFx.playError();
+        onRefreshData();
+      },
+      undo: () => {
+        dataService.updateSponsorStatus(spId, oldStatus);
+        onRefreshData();
+      },
+    });
+  };
+
+  const handleUndo = () => {
+    const desc = undo();
+    if (desc && onShowToast) {
+      onShowToast('Action Undone', `Undid: ${desc}`, 'info');
+    }
+  };
+
+  const handleRedo = () => {
+    const desc = redo();
+    if (desc && onShowToast) {
+      onShowToast('Action Redone', `Redid: ${desc}`, 'info');
+    }
+  };
+
+  // CSV Exports
   const handleExportParticipantsCSV = () => {
     const rows = eventPasses.map((p) => ({
       'Student Name': p.studentName,
@@ -161,674 +398,976 @@ export const OrganizerCommandCenter: React.FC<Props> = ({
       Department: p.studentDepartment,
       Year: p.studentYear,
       'Entry Code': p.code,
+      'Seat Label': p.seatLabel || 'N/A',
       Status: p.checkedIn ? 'Checked-In' : 'Registered',
       'Check-in Time': p.checkedInAt || 'N/A',
       'Seat No': p.seatNo,
     }));
-    exportToCSV(`${currentEvent.title.replace(/\s+/g, '_')}_Participants.csv`, rows);
-  };
-
-  // Action: Export Feedback CSV
-  const handleExportFeedbackCSV = () => {
-    const rows = eventFeedbacks.map((f) => ({
-      'Student Name': f.isAnonymous ? 'Anonymous' : f.studentName,
-      'Overall Rating': f.overallRating,
-      'Organization Rating': f.organizationRating,
-      'Content Rating': f.contentRating,
-      'Venue Rating': f.venueRating,
-      'Luggage Tags': f.luggageTags.join('; '),
-      'What Enjoyed': f.enjoyedText,
-      'What Improve': f.improveText,
-      Recommend: f.recommend,
-      SubmittedAt: f.submittedAt,
-    }));
-    exportToCSV(`${currentEvent.title.replace(/\s+/g, '_')}_Feedback.csv`, rows);
-  };
-
-  // Action: Run Judging Demo Scenario
-  const handleRunDemoScenario = () => {
-    try {
-      const result = dataService.runJudgingDemoScenario();
-      onRefreshData();
-      setSelectedEventId(result.event.id);
-      setEventTab('overview');
-
-      setDemoLog({
-        show: true,
-        title: 'JUDGING DEMO SCENARIO EXECUTED',
-        details: `Event "${result.event.title}" created. Participant ${result.pass.studentName} (${result.pass.code}) registered.`,
-        firstScanStatus: result.firstScan.status === 'VALID' ? 'FIRST SCAN: ACCEPTED (VALID) ✅' : 'FAILED',
-        secondScanStatus: result.secondScan.status === 'DUPLICATE' ? 'SECOND SCAN: REJECTED (DUPLICATE SHIELD) 🛡️' : 'FAILED',
-      });
-    } catch (err) {
-      alert('Demo execution failed: ' + String(err));
-    }
-  };
-
-  // Action: Reset to Demo Seed Data
-  const handleResetDemoSeed = () => {
-    if (window.confirm('Reset all events, passes, and scans back to the initial 3 campus events?')) {
-      dataService.resetToDemoSeed();
-      onRefreshData();
-    }
-  };
-
-  // Action: Copy Registration Link
-  const handleCopyRegLink = () => {
-    const link = `${window.location.origin}#event=${currentEvent.id}`;
-    navigator.clipboard.writeText(link);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    exportToCSV(`${currentEvent?.title.replace(/\s+/g, '_')}_Roster.csv`, rows);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 space-y-8 select-none">
-      {/* Top Header & Shortcuts Bar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#E8D9B0]/20 pb-6">
+    <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col gap-8">
+      {/* Top Bar: Title, Live Pulse, Undo/Redo & Fast Scanner Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E8D9B0]/20">
         <div>
-          <div className="font-eyebrow text-xs text-[#E8D9B0] uppercase tracking-[0.25em]">
-            Command Center // Festival Warden Console
+          <div className="flex items-center gap-3">
+            <h1 className="font-display font-black text-2xl sm:text-3xl text-gold-gradient uppercase tracking-wider">
+              Organizer Command Center
+            </h1>
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/50 text-[11px] text-emerald-300 font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span>LIVE</span>
+            </div>
           </div>
-          <h1 className="font-display font-black text-3xl sm:text-5xl text-gold-gradient uppercase tracking-wider mt-1">
-            {organizerProfile?.clubName || 'CAMPUS DISPATCH'} HUD
-          </h1>
-          <p className="font-eyebrow text-sm text-[#FFF6E5]/80 mt-1">
-            Overseeing {events.length} festival arenas and cryptographic attendance checkpoint desks.
+          <p className="font-sans text-xs text-[#E8D9B0]/70 mt-1">
+            Council Desk · Last telemetry updated at <strong className="text-[#FFF6E5]">{lastUpdated}</strong>
           </p>
         </div>
 
-        {/* Global Action Toolbar */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Judging Demo Runner Button */}
+        {/* Toolbar: Undo / Redo & Scanner Button */}
+        <div className="flex items-center gap-2">
+          {/* Undo Button */}
           <button
-            onClick={handleRunDemoScenario}
-            className="btn-glass-pill flex items-center gap-1.5 px-4 py-2 text-xs uppercase"
-            title="Run end-to-end demo test with duplicate rejection"
+            onClick={handleUndo}
+            disabled={!canUndo}
+            title={canUndo ? `Undo: ${undoDesc} (Ctrl+Z)` : 'Nothing to undo'}
+            className={`p-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-heading font-semibold transition-all ${
+              canUndo
+                ? 'bg-[#10142E] border-[#E8D9B0]/50 text-[#E8D9B0] hover:text-[#FFF6E5] hover:border-[#E8D9B0] shadow-sm'
+                : 'bg-[#060A1C] border-slate-800 text-slate-600 cursor-not-allowed'
+            }`}
           >
-            <Play className="w-3.5 h-3.5 text-[#E04A7B]" />
-            <span>Run Demo Test ★</span>
+            <Undo2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Undo ↶</span>
           </button>
 
-          {/* Reset Demo Data */}
+          {/* Redo Button */}
           <button
-            onClick={handleResetDemoSeed}
-            className="btn-ghost-pill flex items-center gap-1.5 px-3.5 py-2 text-xs uppercase"
-            title="Reset to initial campus events"
+            onClick={handleRedo}
+            disabled={!canRedo}
+            title={canRedo ? `Redo: ${redoDesc} (Ctrl+Shift+Z)` : 'Nothing to redo'}
+            className={`p-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-heading font-semibold transition-all ${
+              canRedo
+                ? 'bg-[#10142E] border-[#E8D9B0]/50 text-[#E8D9B0] hover:text-[#FFF6E5] hover:border-[#E8D9B0] shadow-sm'
+                : 'bg-[#060A1C] border-slate-800 text-slate-600 cursor-not-allowed'
+            }`}
           >
-            <RefreshCw className="w-3.5 h-3.5 text-[#E8D9B0]" />
-            <span>Reset Demo</span>
+            <Redo2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Redo ↷</span>
           </button>
 
-          {/* New Event Button (Shortcut N) */}
-          <button
-            onClick={onOpenNewEvent}
-            className="btn-glass-pill flex items-center gap-1.5 px-4 py-2 text-xs uppercase"
-          >
-            <Plus className="w-3.5 h-3.5 text-[#E8D9B0]" />
-            <span>New Event</span>
-            <kbd className="bg-black/40 text-[#E8D9B0] px-1.5 py-0.5 rounded text-[9px] border border-[#E8D9B0]/20">N</kbd>
-          </button>
-
-          {/* Scanner Button (Shortcut S) */}
-          <button
+          <OrnateButton
+            size="sm"
+            variant="primary"
+            icon={QrCode}
             onClick={() => onOpenScanner(currentEvent?.id)}
-            className="btn-crimson-pill flex items-center gap-1.5 px-5 py-2 text-xs uppercase font-semibold"
           >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>Gate Scanner</span>
-            <kbd className="bg-black/30 text-[#FFF6E5] px-1.5 py-0.5 rounded text-[9px]">S</kbd>
+            Camera Scanner
+          </OrnateButton>
+
+          <OrnateButton
+            size="sm"
+            variant="ghost"
+            icon={Plus}
+            onClick={onOpenNewEvent}
+          >
+            Pin Notice
+          </OrnateButton>
+        </div>
+      </div>
+
+      {/* PART 3.1: Big Number Tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        {/* Tile 1: Total Registered */}
+        <div className="p-4 rounded-xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-lg flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-[#E8D9B0]/80">
+            <span className="font-heading uppercase tracking-wider">Registered</span>
+            <Users className="w-4 h-4 text-[#38BDF8]" />
+          </div>
+          <div className="mt-3">
+            <span className="font-display font-black text-2xl sm:text-3xl text-[#FFF6E5]">
+              {totalRegisteredAll}
+            </span>
+            <div className="flex items-center gap-1 text-[11px] text-emerald-400 mt-1 font-mono">
+              <TrendingUp className="w-3 h-3" />
+              <span>▲ +12 today</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tile 2: Checked In */}
+        <div className="p-4 rounded-xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-lg flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-[#E8D9B0]/80">
+            <span className="font-heading uppercase tracking-wider">Checked In</span>
+            <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+          </div>
+          <div className="mt-3">
+            <span className="font-display font-black text-2xl sm:text-3xl text-[#10B981]">
+              {totalCheckedInAll}
+            </span>
+            <div className="flex items-center gap-1 text-[11px] text-emerald-400 mt-1 font-mono">
+              <TrendingUp className="w-3 h-3" />
+              <span>▲ +5 this hr</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tile 3: Check-in % */}
+        <div className="p-4 rounded-xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-lg flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-[#E8D9B0]/80">
+            <span className="font-heading uppercase tracking-wider">Check-in %</span>
+            <Activity className="w-4 h-4 text-[#E04A7B]" />
+          </div>
+          <div className="mt-3">
+            <span className="font-display font-black text-2xl sm:text-3xl text-gold-gradient">
+              {overallCheckinRate}%
+            </span>
+            <div className="flex items-center gap-1 text-[11px] text-[#E8D9B0]/70 mt-1 font-mono">
+              <span>Target: 80%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tile 4: Seats Left */}
+        <div className="p-4 rounded-xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-lg flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-[#E8D9B0]/80">
+            <span className="font-heading uppercase tracking-wider">Seats Left</span>
+            <Armchair className="w-4 h-4 text-[#F59E0B]" />
+          </div>
+          <div className="mt-3">
+            <span className="font-display font-black text-2xl sm:text-3xl text-[#FFF6E5]">
+              {seatsLeftAll}
+            </span>
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 font-mono">
+              <span>of {totalCapacityAll} total</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tile 5: Active Events */}
+        <div className="p-4 rounded-xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-lg flex flex-col justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-xs text-[#E8D9B0]/80">
+            <span className="font-heading uppercase tracking-wider">Active Events</span>
+            <Layers className="w-4 h-4 text-[#A855F7]" />
+          </div>
+          <div className="mt-3">
+            <span className="font-display font-black text-2xl sm:text-3xl text-[#FFF6E5]">
+              {liveEventsCount}
+            </span>
+            <div className="flex items-center gap-1 text-[11px] text-emerald-400 mt-1 font-mono">
+              <span>● 1 Live Now</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Event Selector & Navigation Tabs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-xl bg-[#060A1C]/80 border border-[#E8D9B0]/20">
+        {/* Event Dropdown Picker */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-heading uppercase text-[#E8D9B0] shrink-0 font-bold">
+            Focus Event:
+          </span>
+          <select
+            value={selectedEventId}
+            onChange={(e) => setSelectedEventId(e.target.value)}
+            className="p-2.5 rounded-lg bg-[#10142E] border border-[#E8D9B0]/40 text-xs sm:text-sm font-display text-[#FFF6E5] focus:outline-none focus:border-[#E8D9B0]"
+          >
+            {events.map((ev) => (
+              <option key={ev.id} value={ev.id}>
+                {ev.title} ({ev.registeredCount}/{ev.capacity}) — {ev.status}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setEventTab('overview')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all ${
+              eventTab === 'overview'
+                ? 'bg-[#B3345C] text-[#FFF6E5] font-bold shadow-md'
+                : 'text-[#E8D9B0]/70 hover:text-[#FFF6E5] hover:bg-[#10142E]'
+            }`}
+          >
+            Live Graphs
+          </button>
+          <button
+            onClick={() => setEventTab('seatMap')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all flex items-center gap-1 ${
+              eventTab === 'seatMap'
+                ? 'bg-[#B3345C] text-[#FFF6E5] font-bold shadow-md'
+                : 'text-[#E8D9B0]/70 hover:text-[#FFF6E5] hover:bg-[#10142E]'
+            }`}
+          >
+            <Armchair className="w-3.5 h-3.5" />
+            <span>Seat Matrix</span>
+          </button>
+          <button
+            onClick={() => setEventTab('participants')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all ${
+              eventTab === 'participants'
+                ? 'bg-[#B3345C] text-[#FFF6E5] font-bold shadow-md'
+                : 'text-[#E8D9B0]/70 hover:text-[#FFF6E5] hover:bg-[#10142E]'
+            }`}
+          >
+            Roster ({eventPasses.length})
+          </button>
+          <button
+            onClick={() => setEventTab('requests')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all flex items-center gap-1.5 ${
+              eventTab === 'requests'
+                ? 'bg-[#B3345C] text-[#FFF6E5] font-bold shadow-md'
+                : 'text-[#E8D9B0]/70 hover:text-[#FFF6E5] hover:bg-[#10142E]'
+            }`}
+          >
+            <span>Requests</span>
+            {totalPendingRequests > 0 && (
+              <span className="w-4 h-4 rounded-full bg-[#E04A7B] text-[10px] flex items-center justify-center font-bold text-white">
+                {totalPendingRequests}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setEventTab('feedback')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all ${
+              eventTab === 'feedback'
+                ? 'bg-[#B3345C] text-[#FFF6E5] font-bold shadow-md'
+                : 'text-[#E8D9B0]/70 hover:text-[#FFF6E5] hover:bg-[#10142E]'
+            }`}
+          >
+            Feedback ({eventFeedbacks.length})
+          </button>
+          <button
+            onClick={() => setEventTab('posterQr')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all ${
+              eventTab === 'posterQr'
+                ? 'bg-[#B3345C] text-[#FFF6E5] font-bold shadow-md'
+                : 'text-[#E8D9B0]/70 hover:text-[#FFF6E5] hover:bg-[#10142E]'
+            }`}
+          >
+            Flyer QR
           </button>
         </div>
       </div>
 
-      {/* Demo Runner Result Banner (if triggered) */}
-      {demoLog && (
-        <div className="p-4 rounded-2xl glass-panel border border-emerald-500/40 text-[#FFF6E5] font-sans space-y-2 shadow-[0_0_24px_rgba(16,185,129,0.25)]">
-          <div className="flex items-center justify-between border-b border-white/10 pb-1">
-            <span className="font-bold text-[#E04A7B] text-xs">★ {demoLog.title}</span>
-            <button
-              onClick={() => setDemoLog(null)}
-              className="text-xs text-[#FFF6E5]/70 hover:text-[#FFF6E5]"
-            >
-              Dismiss
-            </button>
+      {/* ========================================================
+          TAB 1: LIVE GRAPHS (PART 3)
+          ======================================================== */}
+      {eventTab === 'overview' && (
+        <div className="flex flex-col gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Chart 1: Registrations Over Time */}
+            <div className="p-6 rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E8D9B0]/15">
+                  <h3 className="font-display font-bold text-base text-[#FFF6E5] uppercase">
+                    Registration Curve Over Time
+                  </h3>
+                  <span className="text-xs text-emerald-400 font-mono">Live Feed</span>
+                </div>
+                <div className="h-64 mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={timelineData}>
+                      <defs>
+                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#E04A7B" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#E04A7B" stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="time" stroke="#E8D9B0" opacity={0.6} tick={{ fontSize: 11 }} />
+                      <YAxis stroke="#E8D9B0" opacity={0.6} tick={{ fontSize: 11 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#060A1C',
+                          borderColor: '#E8D9B0',
+                          borderRadius: '8px',
+                          color: '#FFF6E5',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="registrations"
+                        stroke="#E04A7B"
+                        strokeWidth={2.5}
+                        fillOpacity={1}
+                        fill="url(#areaGradient)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <p className="font-sans text-xs text-[#E8D9B0]/80 mt-3 pt-3 border-t border-[#E8D9B0]/10">
+                Peak registrations surged during the afternoon break (+42 submissions between 13:00 and 15:00).
+              </p>
+            </div>
+
+            {/* Chart 2: Registrations by Category */}
+            <div className="p-6 rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E8D9B0]/15">
+                  <h3 className="font-display font-bold text-base text-[#FFF6E5] uppercase">
+                    Registrations by Category
+                  </h3>
+                  <span className="text-xs text-[#E8D9B0]/70 font-mono">Total: {totalRegisteredAll}</span>
+                </div>
+                <div className="h-64 mt-4 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryDonutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={4}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {categoryDonutData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#060A1C',
+                          borderColor: '#E8D9B0',
+                          borderRadius: '8px',
+                          color: '#FFF6E5',
+                          fontSize: '12px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <p className="font-sans text-xs text-[#E8D9B0]/80 mt-3 pt-3 border-t border-[#E8D9B0]/10">
+                Cultural nights & Hackathons are filling fastest — commanding 74% of all ticket allocations.
+              </p>
+            </div>
+
+            {/* Chart 3: Seats Filled per Event (Stacked Horizontal Bars) */}
+            <div className="p-6 rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E8D9B0]/15">
+                  <h3 className="font-display font-bold text-base text-[#FFF6E5] uppercase">
+                    Seats Filled per Event (Auditorium Matrix)
+                  </h3>
+                  <div className="flex items-center gap-3 text-[11px] text-[#FFF6E5]/80">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#10B981]" /> Checked In
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-[#F59E0B]" /> Registered
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-slate-600" /> Free
+                    </span>
+                  </div>
+                </div>
+                <div className="h-64 mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart layout="vertical" data={seatsStackedData}>
+                      <XAxis type="number" stroke="#E8D9B0" opacity={0.6} tick={{ fontSize: 11 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        stroke="#E8D9B0"
+                        opacity={0.8}
+                        tick={{ fontSize: 11 }}
+                        width={90}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#060A1C',
+                          borderColor: '#E8D9B0',
+                          borderRadius: '8px',
+                          color: '#FFF6E5',
+                          fontSize: '12px',
+                        }}
+                      />
+                      <Bar dataKey="checkedIn" stackId="a" fill="#10B981" />
+                      <Bar dataKey="registered" stackId="a" fill="#F59E0B" />
+                      <Bar dataKey="free" stackId="a" fill="#334155" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <p className="font-sans text-xs text-[#E8D9B0]/80 mt-3 pt-3 border-t border-[#E8D9B0]/10">
+                HackCampus is currently at 84% venue capacity with 114 attendees verified on site.
+              </p>
+            </div>
+
+            {/* Chart 4: Check-in Rate Radial Gauge */}
+            <div className="p-6 rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-[#E8D9B0]/15">
+                  <h3 className="font-display font-bold text-base text-[#FFF6E5] uppercase">
+                    Admitted Attendance Rate
+                  </h3>
+                  <span className="text-xs text-emerald-400 font-mono">Turnout Meter</span>
+                </div>
+                <div className="h-64 mt-4 flex items-center justify-center relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadialBarChart
+                      cx="50%"
+                      cy="50%"
+                      innerRadius="65%"
+                      outerRadius="95%"
+                      barSize={18}
+                      data={radialGaugeData}
+                      startAngle={90}
+                      endAngle={-270}
+                    >
+                      <RadialBar background={{ fill: '#10142E' }} dataKey="value" cornerRadius={10} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#060A1C',
+                          borderColor: '#E8D9B0',
+                          borderRadius: '8px',
+                          color: '#FFF6E5',
+                          fontSize: '12px',
+                        }}
+                      />
+                    </RadialBarChart>
+                  </ResponsiveContainer>
+                  <div className="absolute flex flex-col items-center">
+                    <span className="font-display font-black text-4xl text-[#10B981]">
+                      {attendanceRate}%
+                    </span>
+                    <span className="text-[11px] font-heading uppercase text-[#E8D9B0]/70 mt-1">
+                      Admitted Gate Flow
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="font-sans text-xs text-[#E8D9B0]/80 mt-3 pt-3 border-t border-[#E8D9B0]/10">
+                {attendanceRate >= 60
+                  ? 'Attendance is healthy — quorum reached for judging and award ceremonies.'
+                  : 'Doors are actively admitting registered participants at the main vestibule.'}
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-[#FFF6E5]/90">{demoLog.details}</p>
-          <div className="flex flex-wrap gap-4 pt-1 text-xs font-semibold">
-            <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30">
-              {demoLog.firstScanStatus}
-            </span>
-            <span className="text-[#E04A7B] bg-[#B3345C]/20 px-2.5 py-1 rounded-full border border-[#E04A7B]/40">
-              {demoLog.secondScanStatus}
-            </span>
-          </div>
+
+          {/* Quick Seat Map Preview directly under charts */}
+          {currentEvent && (
+            <CinemaSeatMap
+              event={currentEvent}
+              passes={passes}
+              isOrganizer={true}
+              onCheckInPass={handleCheckInWithHistory}
+              onUndoCheckInPass={handleUndoCheckInWithHistory}
+            />
+          )}
         </div>
       )}
 
-      {/* Select Active Event Carousel / Tabs */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between font-sans text-xs text-[#E8D9B0]">
-          <span className="font-medium uppercase tracking-wider flex items-center gap-1.5">
-            <span>SELECT ARENA TO MANAGE:</span>
-          </span>
-          <span className="text-[11px] text-[#FFF6E5]/60">CLICK AN ARENA TO FOCUS COMMAND DECK</span>
-        </div>
+      {/* ========================================================
+          TAB 2: FULL SEAT MATRIX (PART 4.1)
+          ======================================================== */}
+      {eventTab === 'seatMap' && currentEvent && (
+        <CinemaSeatMap
+          event={currentEvent}
+          passes={passes}
+          isOrganizer={true}
+          onCheckInPass={handleCheckInWithHistory}
+          onUndoCheckInPass={handleUndoCheckInWithHistory}
+        />
+      )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {events.map((ev) => {
-            const isSelected = ev.id === currentEvent?.id;
-            return (
-              <div
-                key={ev.id}
-                onClick={() => setSelectedEventId(ev.id)}
-                className={`cursor-pointer p-4 rounded-2xl border font-sans transition-all ${
-                  isSelected
-                    ? 'glass-panel border-[#E8D9B0] shadow-[0_0_24px_rgba(232,217,176,0.25)] scale-[1.01]'
-                    : 'glass-panel-subtle border-[#E8D9B0]/20 hover:border-[#E8D9B0]/45'
+      {/* ========================================================
+          TAB 3: PARTICIPANTS ROSTER
+          ======================================================== */}
+      {eventTab === 'participants' && (
+        <div className="rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 p-6 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8D9B0]/20">
+            <div>
+              <h3 className="font-display font-bold text-lg text-[#FFF6E5] uppercase">
+                Attendee Ledger & Seat Allocations
+              </h3>
+              <p className="text-xs text-[#E8D9B0]/75">
+                {eventPasses.length} registered · {eventPasses.filter((p) => p.checkedIn).length} checked in
+              </p>
+            </div>
+            <OrnateButton
+              size="sm"
+              variant="ghost"
+              icon={FileSpreadsheet}
+              onClick={handleExportParticipantsCSV}
+            >
+              Export CSV
+            </OrnateButton>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+            <div className="relative">
+              <Search className="w-4 h-4 text-[#E8D9B0]/60 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search name, roll, or pass code..."
+                value={participantSearch}
+                onChange={(e) => setParticipantSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#10142E] border border-[#E8D9B0]/30 text-xs text-[#FFF6E5] focus:outline-none"
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="py-2 px-3 rounded-lg bg-[#10142E] border border-[#E8D9B0]/30 text-xs text-[#FFF6E5] focus:outline-none"
+            >
+              <option value="all">All Check-In Statuses</option>
+              <option value="checkedIn">Admitted (Checked-In)</option>
+              <option value="notYet">Pending (Not Yet Admitted)</option>
+            </select>
+
+            <select
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              className="py-2 px-3 rounded-lg bg-[#10142E] border border-[#E8D9B0]/30 text-xs text-[#FFF6E5] focus:outline-none"
+            >
+              <option value="ALL">All Departments</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Roster Table */}
+          {filteredPasses.length > 0 ? (
+            <div className="overflow-x-auto mt-2">
+              <table className="w-full text-left text-xs text-[#FFF6E5]">
+                <thead className="bg-[#10142E] text-[#E8D9B0] uppercase font-heading text-[11px] border-b border-[#E8D9B0]/20">
+                  <tr>
+                    <th className="py-3 px-3">Avatar</th>
+                    <th className="py-3 px-3">Student Name</th>
+                    <th className="py-3 px-3">Roll & Dept</th>
+                    <th className="py-3 px-3">Pass Code</th>
+                    <th className="py-3 px-3">Seat</th>
+                    <th className="py-3 px-3">Status</th>
+                    <th className="py-3 px-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E8D9B0]/10 font-sans">
+                  {filteredPasses.map((p) => (
+                    <tr key={p.id} className="hover:bg-[#10142E]/50 transition-colors">
+                      <td className="py-2.5 px-3">
+                        <ParticipantPortrait
+                          size="sm"
+                          traits={p.characterTraits}
+                          seedCode={p.code}
+                          celebrate={p.checkedIn}
+                        />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <strong className="text-[#FFF6E5]">{p.studentName}</strong>
+                        <span className="block text-[11px] text-[#E8D9B0]/60">{p.studentEmail}</span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="font-mono text-xs">{p.studentRollNumber}</span>
+                        <span className="block text-[11px] text-[#E8D9B0]/70">
+                          {p.studentDepartment} ({p.studentYear})
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 font-mono text-xs text-[#E8D9B0]">
+                        {p.code}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 rounded bg-[#10142E] border border-[#E8D9B0]/40 font-mono text-xs font-bold text-[#FFF6E5]">
+                          {p.seatLabel || `Seat ${p.seatNo}`}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-heading uppercase font-bold ${
+                            p.checkedIn
+                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-500'
+                              : 'bg-amber-950 text-amber-300 border border-amber-500'
+                          }`}
+                        >
+                          {p.checkedIn ? 'Admitted' : 'Pending'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {!p.checkedIn ? (
+                            <OrnateButton
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handleCheckInWithHistory(p.code)}
+                            >
+                              Check In
+                            </OrnateButton>
+                          ) : (
+                            <OrnateButton
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleUndoCheckInWithHistory(p.code)}
+                            >
+                              Revert
+                            </OrnateButton>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyNoticeState
+              title="No participants found"
+              description="Adjust your search criteria or invite students to register for this event."
+            />
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 4: REQUESTS (PART 1.6)
+          ======================================================== */}
+      {eventTab === 'requests' && (
+        <div className="rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 p-6 shadow-xl flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E8D9B0]/20">
+            <div>
+              <h3 className="font-display font-bold text-lg text-[#FFF6E5] uppercase">
+                Fest Operations Request Queue
+              </h3>
+              <p className="text-xs text-[#E8D9B0]/75">
+                Review and approve volunteer crew applications, bazaar stall permits, and sponsor pledges.
+              </p>
+            </div>
+
+            {/* Sub-Tabs */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setRequestsSubTab('volunteers')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all flex items-center gap-1.5 ${
+                  requestsSubTab === 'volunteers'
+                    ? 'bg-[#38BDF8] text-[#060A1C] font-bold'
+                    : 'bg-[#10142E] text-[#38BDF8] border border-[#38BDF8]/40'
                 }`}
               >
-                <div className="flex items-center justify-between text-[10px] pb-1 border-b border-[#E8D9B0]/15">
-                  <span className="font-semibold text-[#E8D9B0] uppercase">{ev.category}</span>
-                  <span className="font-bold text-[#E04A7B] bg-[#B3345C]/20 px-2 py-0.5 rounded-full border border-[#B3345C]/30">
-                    {ev.status}
-                  </span>
-                </div>
-                <h4 className="font-display font-black text-sm uppercase truncate text-[#FFF6E5] mt-1.5">
-                  {ev.title}
-                </h4>
-                <div className="flex items-center justify-between text-[11px] pt-2 mt-1 text-[#FFF6E5]/75">
-                  <span>{ev.date.slice(0, 15)}</span>
-                  <span className="font-semibold text-[#E8D9B0]">
-                    {ev.registeredCount}/{ev.capacity} Claimed
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Current Event Command Module */}
-      {currentEvent && (
-        <div className="glass-panel border border-[#E8D9B0]/25 rounded-[32px] p-6 sm:p-8 shadow-[0_16px_48px_rgba(0,0,0,0.6)] text-[#FFF6E5] space-y-6">
-          {/* Header of Active Event */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-dashed border-[#2A1A14]/30 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-typewriter text-[10px] text-[#8E2A2A] font-black uppercase tracking-widest">
-                  EVENT COMMAND DECK
-                </span>
-                <ImportantStamp text={currentEvent.status} className="text-[9px]" />
-              </div>
-              <h2 className="font-display font-black text-2xl sm:text-3xl uppercase leading-tight mt-0.5">
-                {currentEvent.title}
-              </h2>
-              <p className="font-typewriter text-xs text-[#2A1A14]/80">
-                {currentEvent.date} at {currentEvent.time} • {currentEvent.venue}
-              </p>
-            </div>
-
-            {/* Quick Event Actions */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => onSelectEventToEdit(currentEvent)}
-                className="btn-postal-cream flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs uppercase"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                <span>Edit</span>
+                <HeartHandshake className="w-3.5 h-3.5" />
+                <span>Volunteers ({volunteers.length})</span>
               </button>
-
               <button
-                onClick={() => onOpenScanner(currentEvent.id)}
-                className="btn-postal-red flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs uppercase font-bold"
+                onClick={() => setRequestsSubTab('stalls')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all flex items-center gap-1.5 ${
+                  requestsSubTab === 'stalls'
+                    ? 'bg-[#F59E0B] text-[#060A1C] font-bold'
+                    : 'bg-[#10142E] text-[#F59E0B] border border-[#F59E0B]/40'
+                }`}
               >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Scan for this Event</span>
+                <Store className="w-3.5 h-3.5" />
+                <span>Stalls ({stalls.length})</span>
               </button>
-
               <button
-                onClick={() => {
-                  if (window.confirm(`Delete "${currentEvent.title}" and cancel all its passes?`)) {
-                    dataService.deleteEvent(currentEvent.id);
-                    onRefreshData();
-                  }
-                }}
-                className="p-2 rounded-xl bg-[#8E2A2A] text-[#FFF6E5] border-2 border-[#2A1A14] hover:bg-[#A03030]"
-                title="Delete event"
+                onClick={() => setRequestsSubTab('sponsors')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-heading uppercase transition-all flex items-center gap-1.5 ${
+                  requestsSubTab === 'sponsors'
+                    ? 'bg-[#E04A7B] text-[#060A1C] font-bold'
+                    : 'bg-[#10142E] text-[#E04A7B] border border-[#E04A7B]/40'
+                }`}
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Gem className="w-3.5 h-3.5" />
+                <span>Sponsors ({sponsors.length})</span>
               </button>
             </div>
           </div>
 
-          {/* Module Sub-tabs */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-[#E8D9B0]/20 pb-4 font-sans text-xs">
-            <button
-              onClick={() => setEventTab('overview')}
-              className={`px-4 py-2 rounded-full font-medium transition-all ${
-                eventTab === 'overview'
-                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
-                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
-              }`}
-            >
-              1. Overview & Analytics
-            </button>
+          {/* Volunteers Request List */}
+          {requestsSubTab === 'volunteers' && (
+            <div className="flex flex-col gap-4">
+              {volunteers.map((vol) => (
+                <div
+                  key={vol.id}
+                  className="p-5 rounded-xl bg-[#10142E] border border-[#E8D9B0]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-display font-bold text-base text-[#FFF6E5]">
+                        {vol.name}
+                      </span>
+                      <span className="font-mono text-xs text-[#38BDF8] bg-[#060A1C] px-2 py-0.5 rounded border border-[#38BDF8]/30">
+                        {vol.badgeCode}
+                      </span>
+                      <span
+                        className={`text-[10px] font-heading uppercase px-2 py-0.5 rounded-full font-bold ${
+                          vol.status === 'Approved'
+                            ? 'bg-emerald-950 text-emerald-300'
+                            : vol.status === 'Rejected'
+                            ? 'bg-rose-950 text-rose-300'
+                            : 'bg-amber-950 text-amber-300'
+                        }`}
+                      >
+                        {vol.status}
+                      </span>
+                    </div>
 
-            <button
-              onClick={() => setEventTab('participants')}
-              className={`px-4 py-2 rounded-full font-medium transition-all ${
-                eventTab === 'participants'
-                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
-                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
-              }`}
-            >
-              2. Participants Ledger ({eventPasses.length})
-            </button>
+                    <p className="text-xs text-[#E8D9B0]/75 mt-1 font-sans">
+                      {vol.department} · {vol.year} · {vol.collegeEmail} · {vol.phone}
+                    </p>
 
-            <button
-              onClick={() => setEventTab('feedback')}
-              className={`px-4 py-2 rounded-full font-medium transition-all ${
-                eventTab === 'feedback'
-                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
-                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
-              }`}
-            >
-              3. Attendee Feedback ({eventFeedbacks.length})
-            </button>
-
-            <button
-              onClick={() => setEventTab('posterQr')}
-              className={`px-4 py-2 rounded-full font-medium transition-all ${
-                eventTab === 'posterQr'
-                  ? 'btn-crimson-pill text-[#FFF6E5] shadow-[0_0_16px_rgba(224,74,123,0.4)]'
-                  : 'glass-pill text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
-              }`}
-            >
-              4. Registration QR & Link
-            </button>
-          </div>
-
-          {/* SUB-TAB 1: OVERVIEW & ANALYTICS */}
-          {eventTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Stat Tiles */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-sans">
-                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
-                  <span className="text-[10px] text-[#E8D9B0]/80 font-semibold uppercase block">REGISTERED:</span>
-                  <span className="font-display font-black text-2xl text-gold-gradient block my-0.5">{totalRegistered}</span>
-                  <span className="text-[10px] text-[#FFF6E5]/60 block">of {currentEvent.capacity} seats</span>
-                </div>
-
-                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
-                  <span className="text-[10px] text-emerald-400 font-semibold uppercase block">CHECKED IN:</span>
-                  <span className="font-display font-black text-2xl text-emerald-400 block my-0.5">{totalCheckedIn}</span>
-                  <span className="text-[10px] text-[#FFF6E5]/60 block">at threshold</span>
-                </div>
-
-                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
-                  <span className="text-[10px] text-[#E04A7B] font-semibold uppercase block">SPOTS LEFT:</span>
-                  <span className="font-display font-black text-2xl text-[#E04A7B] block my-0.5">{spotsLeft}</span>
-                  <span className="text-[10px] text-[#FFF6E5]/60 block">open capacity</span>
-                </div>
-
-                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl">
-                  <span className="text-[10px] text-[#E8D9B0]/80 font-semibold uppercase block">PENDING / NO-SHOWS:</span>
-                  <span className="font-display font-black text-2xl text-[#E8D9B0] block my-0.5">{noShows}</span>
-                  <span className="text-[10px] text-[#FFF6E5]/60 block">unverified</span>
-                </div>
-
-                <div className="p-4 glass-panel-subtle border border-[#E8D9B0]/20 rounded-2xl col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-[#E04A7B] font-semibold uppercase block">ATTENDANCE %:</span>
-                  <span className="font-display font-black text-2xl text-[#E04A7B] block my-0.5">{attendanceRate}%</span>
-                  <span className="text-[10px] text-[#FFF6E5]/60 block">turnout rate</span>
-                </div>
-              </div>
-
-              {/* Charts Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                {/* Donut Chart: Check-in turnout */}
-                <div className="bg-[#FFF6E5] p-5 rounded-2xl border-2 border-[#2A1A14] shadow-[3px_3px_0px_#2A1A14] font-typewriter space-y-2">
-                  <span className="font-black text-xs uppercase block text-[#8E2A2A]">
-                    ★ CHECK-IN TURN-OUT RATIO
-                  </span>
-                  <div className="h-52 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={donutData}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={75}
-                          paddingAngle={4}
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {vol.roles.map((r) => (
+                        <span
+                          key={r}
+                          className="px-2 py-0.5 rounded text-[10px] bg-[#1B2257] text-[#38BDF8]"
                         >
-                          {donutData.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex justify-center gap-6 text-[11px] font-bold">
-                    <span className="flex items-center gap-1.5 text-[#5B7A3A]">
-                      <span className="w-3 h-3 bg-[#5B7A3A] rounded-full inline-block" />
-                      Checked-In ({totalCheckedIn})
-                    </span>
-                    <span className="flex items-center gap-1.5 text-[#8E2A2A]">
-                      <span className="w-3 h-3 bg-[#8E2A2A] rounded-full inline-block" />
-                      Pending ({noShows})
-                    </span>
-                  </div>
-                </div>
+                          {r}
+                        </span>
+                      ))}
+                    </div>
 
-                {/* Bar Chart: Department Breakdown */}
-                <div className="bg-[#FFF6E5] p-5 rounded-2xl border-2 border-[#2A1A14] shadow-[3px_3px_0px_#2A1A14] font-typewriter space-y-2">
-                  <span className="font-black text-xs uppercase block text-[#8E2A2A]">
-                    ★ DEPARTMENT-WISE REGISTRATIONS
-                  </span>
-                  <div className="h-52 w-full">
-                    {deptChartData.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-xs opacity-60">
-                        No registrations recorded yet.
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={deptChartData}>
-                          <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                          <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                          <Tooltip />
-                          <Bar dataKey="count" fill="#8E2A2A" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                    <p className="text-xs text-slate-400 mt-2 italic font-sans">
+                      Experience: "{vol.pastExperience}"
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {vol.status !== 'Approved' && (
+                      <OrnateButton
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleApproveVolunteer(vol.id)}
+                      >
+                        Approve & Assign
+                      </OrnateButton>
+                    )}
+                    {vol.status !== 'Rejected' && (
+                      <OrnateButton
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleRejectVolunteer(vol.id)}
+                      >
+                        Reject
+                      </OrnateButton>
                     )}
                   </div>
-                  <div className="text-center text-[10px] opacity-70">
-                    Distribution across enrolled colleges & academic departments
-                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
 
-          {/* SUB-TAB 2: PARTICIPANTS TABLE */}
-          {eventTab === 'participants' && (
-            <div className="space-y-4 font-typewriter text-xs">
-              {/* Table Controls Bar */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-[#FFF6E5] p-3 rounded-2xl border-2 border-[#2A1A14]">
-                <div className="flex flex-wrap items-center gap-2 flex-1">
-                  {/* Search */}
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-[#2A1A14]/50 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={participantSearch}
-                      onChange={(e) => setParticipantSearch(e.target.value)}
-                      placeholder="Search name, roll no, code..."
-                      className="pl-8 pr-3 py-1.5 rounded-lg bg-[#F3E6CE] border border-[#2A1A14] text-xs w-48 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Status Filter */}
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="p-1.5 rounded-lg bg-[#F3E6CE] border border-[#2A1A14] font-bold text-xs"
-                  >
-                    <option value="all">Status: All</option>
-                    <option value="checkedIn">Status: Checked-In</option>
-                    <option value="notYet">Status: Not Yet</option>
-                  </select>
-
-                  {/* Dept Filter */}
-                  <select
-                    value={deptFilter}
-                    onChange={(e) => setDeptFilter(e.target.value)}
-                    className="p-1.5 rounded-lg bg-[#F3E6CE] border border-[#2A1A14] font-bold text-xs"
-                  >
-                    <option value="ALL">Dept: All</option>
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Information Technology">Information Tech</option>
-                    <option value="Electronics & Comm.">Electronics (ECE)</option>
-                    <option value="Mechanical Eng.">Mechanical</option>
-                    <option value="Biotechnology">Biotechnology</option>
-                  </select>
-
-                  {/* Year Filter */}
-                  <select
-                    value={yearFilter}
-                    onChange={(e) => setYearFilter(e.target.value)}
-                    className="p-1.5 rounded-lg bg-[#F3E6CE] border border-[#2A1A14] font-bold text-xs"
-                  >
-                    <option value="ALL">Year: All</option>
-                    <option value="1st Year">1st Year</option>
-                    <option value="2nd Year">2nd Year</option>
-                    <option value="3rd Year">3rd Year</option>
-                    <option value="4th Year">4th Year</option>
-                  </select>
-                </div>
-
-                {/* CSV Export Button */}
-                <button
-                  onClick={handleExportParticipantsCSV}
-                  className="btn-postal-kraft flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase shrink-0"
+          {/* Stalls Request List */}
+          {requestsSubTab === 'stalls' && (
+            <div className="flex flex-col gap-4">
+              {stalls.map((st) => (
+                <div
+                  key={st.id}
+                  className="p-5 rounded-xl bg-[#10142E] border border-[#E8D9B0]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Export CSV</span>
-                </button>
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto bg-[#FFF6E5] rounded-2xl border-2 border-[#2A1A14] shadow-[3px_3px_0px_#2A1A14]">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b-2 border-[#2A1A14] bg-[#F3E6CE] text-[10px] font-black uppercase text-[#2A1A14]/75">
-                      <th className="p-3">STUDENT NAME</th>
-                      <th className="p-3">ROLL NO</th>
-                      <th className="p-3">DEPT & YEAR</th>
-                      <th className="p-3">CODE</th>
-                      <th className="p-3">STATUS</th>
-                      <th className="p-3">TIME</th>
-                      <th className="p-3 text-right">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#2A1A14]/15">
-                    {filteredParticipants.map((p) => (
-                      <tr key={p.id} className="hover:bg-[#F3E6CE]/70 transition-colors">
-                        <td className="p-3">
-                          <span className="font-display font-black text-sm block">{p.studentName}</span>
-                          <span className="text-[10px] opacity-70 block">{p.studentEmail}</span>
-                        </td>
-                        <td className="p-3 font-black text-[#8E2A2A]">{p.studentRollNumber}</td>
-                        <td className="p-3">
-                          <span className="font-bold block">{p.studentDepartment}</span>
-                          <span className="text-[10px] opacity-70 block">{p.studentYear}</span>
-                        </td>
-                        <td className="p-3 font-black">{p.code}</td>
-                        <td className="p-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border border-[#2A1A14] ${
-                              p.checkedIn
-                                ? 'bg-[#5B7A3A] text-[#FFF6E5]'
-                                : 'bg-[#8E2A2A] text-[#FFF6E5]'
-                            }`}
-                          >
-                            {p.checkedIn ? 'CHECKED IN' : 'REGISTERED'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-[10px] opacity-70">
-                          {p.checkedInAt ? new Date(p.checkedInAt).toLocaleTimeString() : '—'}
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {!p.checkedIn ? (
-                              <button
-                                onClick={() => handleManualCheckIn(p.code)}
-                                className="px-2.5 py-1 rounded bg-[#5B7A3A] text-[#FFF6E5] font-bold text-[10px] uppercase border border-[#2A1A14]"
-                                title="Manually stamp in"
-                              >
-                                Stamp In
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-[#5B7A3A] font-bold">Verified</span>
-                            )}
-
-                            <button
-                              onClick={() => onSelectPassToView(p)}
-                              className="p-1 rounded bg-[#F3E6CE] border border-[#2A1A14] hover:bg-[#FFF6E5]"
-                              title="View Pass"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              onClick={() => handleRemoveParticipant(p.id)}
-                              className="p-1 rounded bg-[#8E2A2A] text-[#FFF6E5] border border-[#2A1A14] hover:bg-[#A03030]"
-                              title="Remove participant"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {filteredParticipants.length === 0 && (
-                  <div className="py-8 text-center opacity-60">
-                    No participants matched the filters.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* SUB-TAB 3: FEEDBACK */}
-          {eventTab === 'feedback' && (
-            <div className="space-y-4 font-typewriter text-xs">
-              <div className="flex items-center justify-between bg-[#FFF6E5] p-3 rounded-2xl border-2 border-[#2A1A14]">
-                <div>
-                  <span className="font-black text-xs uppercase block text-[#8E2A2A]">
-                    ATTENDEE REVIEWS ({eventFeedbacks.length} LETTERS)
-                  </span>
-                  <span className="text-[11px] opacity-75">
-                    Average Score: {eventFeedbacks.length > 0 ? (eventFeedbacks.reduce((a, b) => a + b.overallRating, 0) / eventFeedbacks.length).toFixed(1) : 'N/A'} / 5.0 Stars
-                  </span>
-                </div>
-
-                <button
-                  onClick={handleExportFeedbackCSV}
-                  disabled={eventFeedbacks.length === 0}
-                  className="btn-postal-kraft flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase disabled:opacity-50"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Export CSV</span>
-                </button>
-              </div>
-
-              {eventFeedbacks.length === 0 ? (
-                <div className="py-12 text-center bg-[#FFF6E5] rounded-2xl border-2 border-[#2A1A14] p-6 opacity-75">
-                  No feedback letters received yet. Only students who have been checked in can submit reviews.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {eventFeedbacks.map((fb) => (
-                    <div
-                      key={fb.id}
-                      className="bg-[#FFF6E5] p-4 rounded-2xl border-2 border-[#2A1A14] shadow-[2px_2px_0px_#2A1A14] space-y-2"
-                    >
-                      <div className="flex items-center justify-between border-b border-[#2A1A14]/20 pb-1.5">
-                        <span className="font-bold text-sm">
-                          {fb.isAnonymous ? 'Anonymous Attendee' : fb.studentName}
-                        </span>
-                        <span className="text-[#8E2A2A] font-black">
-                          ★ {fb.overallRating}/5 STAMPS
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-1 text-[10px] opacity-80">
-                        <span>Org: {fb.organizationRating}★</span>
-                        <span>Content: {fb.contentRating}★</span>
-                        <span>Venue: {fb.venueRating}★</span>
-                      </div>
-
-                      <div className="bg-[#F3E6CE] p-2.5 rounded-lg border border-[#2A1A14]/20 space-y-1">
-                        <p className="text-xs">
-                          <strong className="text-[#8E2A2A]">Enjoyed:</strong> {fb.enjoyedText}
-                        </p>
-                        {fb.improveText && (
-                          <p className="text-xs">
-                            <strong className="text-[#A98258]">Improve:</strong> {fb.improveText}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap gap-1">
-                        {fb.luggageTags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="bg-[#A98258] text-[#FFF6E5] px-1.5 py-0.5 rounded text-[9px] font-bold"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="text-[10px] opacity-60 text-right">
-                        Would recommend: {fb.recommend}
-                      </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-display font-bold text-base text-[#FFF6E5]">
+                        {st.businessName}
+                      </span>
+                      <span className="text-xs text-[#F59E0B] font-mono font-bold">
+                        ({st.stallType} · {st.spaceNeeded})
+                      </span>
+                      <span
+                        className={`text-[10px] font-heading uppercase px-2 py-0.5 rounded-full font-bold ${
+                          st.status === 'Approved'
+                            ? 'bg-emerald-950 text-emerald-300'
+                            : st.status === 'Rejected'
+                            ? 'bg-rose-950 text-rose-300'
+                            : 'bg-amber-950 text-amber-300'
+                        }`}
+                      >
+                        {st.status}
+                      </span>
                     </div>
-                  ))}
+
+                    <p className="text-xs text-[#E8D9B0]/75 mt-1 font-sans">
+                      Owner: {st.ownerName} · {st.contactEmail} · {st.contactPhone}
+                    </p>
+
+                    <p className="text-xs text-[#FFF6E5]/80 mt-2 font-mono">
+                      Items: {st.itemsSold} ({st.priceRange})
+                    </p>
+                    <p className="text-xs text-[#E8D9B0]/60 font-mono">
+                      Needs: {st.powerWaterNeeds} · Plot: {st.allottedPlot || 'Unassigned'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {st.status !== 'Approved' && (
+                      <OrnateButton
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleApproveStall(st.id)}
+                      >
+                        Allot & Approve
+                      </OrnateButton>
+                    )}
+                    {st.status !== 'Rejected' && (
+                      <OrnateButton
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleRejectStall(st.id)}
+                      >
+                        Reject
+                      </OrnateButton>
+                    )}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           )}
 
-          {/* SUB-TAB 4: POSTER REGISTRATION QR & SHAREABLE LINK */}
-          {eventTab === 'posterQr' && (
-            <div className="max-w-md mx-auto p-6 bg-[#FFF6E5] rounded-3xl border-2 border-[#2A1A14] shadow-[4px_4px_0px_#2A1A14] font-typewriter text-center space-y-4">
-              <span className="text-xs font-black uppercase text-[#8E2A2A] block">
-                ★ PRINTABLE NOTICE BOARD POSTER QR ★
-              </span>
-
-              <h3 className="font-display font-black text-xl uppercase">
-                {currentEvent.title}
-              </h3>
-
-              <div className="bg-white p-4 rounded-2xl border-2 border-[#2A1A14] shadow-[3px_3px_0px_#2A1A14] inline-block">
-                <QRCodeDisplay
-                  text={`${window.location.origin}#event=${currentEvent.id}`}
-                  size={160}
-                  fgColor="#2A1A14"
-                  bgColor="#FFFFFF"
-                />
-              </div>
-
-              <p className="text-xs opacity-75">
-                Students can scan this code from physical campus posters or flyers to open the reply card directly.
-              </p>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`${window.location.origin}#event=${currentEvent.id}`}
-                  className="flex-1 p-2 rounded-lg bg-[#F3E6CE] border border-[#2A1A14] text-[11px] font-bold"
-                />
-                <button
-                  onClick={handleCopyRegLink}
-                  className="btn-postal-red px-3 py-2 rounded-lg text-xs font-bold uppercase"
+          {/* Sponsors Request List */}
+          {requestsSubTab === 'sponsors' && (
+            <div className="flex flex-col gap-4">
+              {sponsors.map((sp) => (
+                <div
+                  key={sp.id}
+                  className="p-5 rounded-xl bg-[#10142E] border border-[#E8D9B0]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                 >
-                  {copiedLink ? 'Copied!' : 'Copy Link'}
-                </button>
-              </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-display font-bold text-base text-[#FFF6E5]">
+                        {sp.companyName}
+                      </span>
+                      <span className="text-xs text-[#E04A7B] font-mono font-bold">
+                        [{sp.kind} Sponsorship]
+                      </span>
+                      <span
+                        className={`text-[10px] font-heading uppercase px-2 py-0.5 rounded-full font-bold ${
+                          sp.status === 'Approved'
+                            ? 'bg-emerald-950 text-emerald-300'
+                            : sp.status === 'Rejected'
+                            ? 'bg-rose-950 text-rose-300'
+                            : 'bg-amber-950 text-amber-300'
+                        }`}
+                      >
+                        {sp.status}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-[#E8D9B0]/75 mt-1 font-sans">
+                      Contact: {sp.contactPerson} · {sp.email} · {sp.phone}
+                    </p>
+
+                    <p className="text-xs text-[#FFF6E5] mt-2 font-mono font-bold">
+                      Pledge: {sp.amountOrItem}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {sp.returnsWanted.map((r, i) => (
+                        <span
+                          key={i}
+                          className="px-2 py-0.5 rounded text-[10px] bg-[#10142E] border border-[#E8D9B0]/20 text-[#E8D9B0]/80"
+                        >
+                          ✓ {r}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {sp.status !== 'Approved' && (
+                      <OrnateButton
+                        size="sm"
+                        variant="primary"
+                        onClick={() => handleApproveSponsor(sp.id)}
+                      >
+                        Confirm & Feature
+                      </OrnateButton>
+                    )}
+                    {sp.status !== 'Rejected' && (
+                      <OrnateButton
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleRejectSponsor(sp.id)}
+                      >
+                        Reject
+                      </OrnateButton>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
+
+      {/* ========================================================
+          TAB 5: FEEDBACK
+          ======================================================== */}
+      {eventTab === 'feedback' && (
+        <div className="rounded-2xl bg-[#060A1C]/90 border border-[#E8D9B0]/25 p-6 shadow-xl flex flex-col gap-4">
+          <h3 className="font-display font-bold text-lg text-[#FFF6E5] uppercase">
+            Participant Feedback & Ratings
+          </h3>
+          {eventFeedbacks.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              {eventFeedbacks.map((fb) => (
+                <div key={fb.id} className="p-4 rounded-xl bg-[#10142E] border border-[#E8D9B0]/20">
+                  <div className="flex items-center justify-between">
+                    <strong className="text-[#FFF6E5]">{fb.isAnonymous ? 'Anonymous' : fb.studentName}</strong>
+                    <span className="font-mono text-xs text-[#F59E0B]">★ {fb.overallRating} / 5</span>
+                  </div>
+                  <p className="text-xs text-[#FFF6E5]/80 mt-2 font-sans italic">
+                    "{fb.enjoyedText}"
+                  </p>
+                  {fb.improveText && (
+                    <p className="text-xs text-[#E8D9B0]/60 mt-1 font-sans">
+                      Suggestion: "{fb.improveText}"
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyNoticeState
+              title="No feedback submitted yet"
+              description="Feedback will appear here once attendees complete their check-in ratings."
+            />
+          )}
+        </div>
+      )}
+
+      {/* ========================================================
+          TAB 6: FLYER QR CODE
+          ======================================================== */}
+      {eventTab === 'posterQr' && currentEvent && (
+        <div className="max-w-md mx-auto p-8 rounded-2xl bg-[#060A1C] border-2 border-[#E8D9B0] shadow-2xl flex flex-col items-center text-center">
+          <span className="font-mono text-xs uppercase tracking-widest text-[#E8D9B0]">
+            REGISTRATION GATEWAY POSTER
+          </span>
+          <h3 className="font-display font-black text-2xl text-[#FFF6E5] uppercase mt-2">
+            {currentEvent.title}
+          </h3>
+          <p className="text-xs text-[#E8D9B0]/80 mt-1">
+            {currentEvent.date} · {currentEvent.venue}
+          </p>
+
+          <div className="my-6 p-4 rounded-2xl bg-white shadow-2xl flex items-center justify-center">
+            <QRCodeDisplay text={`https://campuspost.edu/events#${currentEvent.id}`} size={200} />
+          </div>
+
+          <p className="font-sans text-xs text-[#FFF6E5]/75">
+            Scan to register instantly, secure seat allocations, and receive your digital QR pass.
+          </p>
+        </div>
+      )}
+
+      {/* Types of Events Section to keep all dashboard areas rich and populated (PART 2.3) */}
+      <EventCategoryShowcase
+        events={events}
+        onSelectCategory={(cat) => {
+          const match = events.find((e) => e.category === cat);
+          if (match) setSelectedEventId(match.id);
+        }}
+      />
     </div>
   );
 };

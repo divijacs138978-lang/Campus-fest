@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
 import { CampusEvent, CampusPass, StudentProfile } from '../types';
+import { dataService } from '../services/dataService';
 import { EnvelopeEventCard } from './EnvelopeEventCard';
 import { PassContainer } from './passes/PassContainer';
-import {
-  PostageStamp,
-  PointingHand,
-  ImportantStamp,
-  PaperClip,
-} from './PostalDecorations';
+import { CinemaSeatMap } from './CinemaSeatMap';
+import { EventCategoryShowcase } from './EventCategoryShowcase';
+import { EmptyNoticeState } from './EmptyNoticeState';
+import { ScrollStory } from './ScrollStory';
+import { OrnateButton } from './ui/OrnateButton';
 import {
   Compass,
   Inbox,
@@ -16,10 +15,10 @@ import {
   Search,
   CheckCircle2,
   Clock,
-  MessageSquarePlus,
-  QrCode,
-  Calendar,
+  Sparkles,
+  BookOpen,
 } from 'lucide-react';
+import { soundFx } from '../utils/audio';
 
 interface Props {
   events: CampusEvent[];
@@ -46,14 +45,14 @@ export const StudentDashboard: React.FC<Props> = ({
   onShowToast,
   onOpenTrail,
 }) => {
-  const [activeTab, setActiveTab] = useState<'board' | 'passes' | 'profile'>('board');
+  const [activeTab, setActiveTab] = useState<'board' | 'story' | 'passes' | 'profile'>('board');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPassId, setSelectedPassId] = useState<string>(myPasses[0]?.id || '');
 
   // Profile form state
   const [profName, setProfName] = useState(studentProfile?.name || 'Aarav Sharma');
-  const [profEmail, setProfEmail] = useState(studentProfile?.collegeEmail || 'aarav.sharma@campuspost.edu');
+  const [profEmail, setProfEmail] = useState(studentProfile?.collegeEmail || 'aarav.sharma@festora.edu');
   const [profRoll, setProfRoll] = useState(studentProfile?.rollNumber || '22CS084');
   const [profDept, setProfDept] = useState(studentProfile?.department || 'Computer Science');
   const [profYear, setProfYear] = useState(studentProfile?.year || '3rd Year');
@@ -89,6 +88,7 @@ export const StudentDashboard: React.FC<Props> = ({
       phone: profPhone.trim(),
     };
     onUpdateProfile(updated);
+    soundFx.playConfirm();
     setProfileSavedToast(true);
     setTimeout(() => setProfileSavedToast(false), 2500);
   };
@@ -99,13 +99,13 @@ export const StudentDashboard: React.FC<Props> = ({
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#E8D9B0]/20 pb-6">
         <div>
           <div className="font-eyebrow text-xs text-[#E8D9B0] uppercase tracking-[0.25em]">
-            Portal Domain // Student Sanctuary
+            Portal Domain // Festival Events & Notice Board
           </div>
           <h1 className="font-display font-black text-3xl sm:text-5xl text-gold-gradient uppercase tracking-wider mt-1">
-            STUDENT DESK
+            FESTORA NOTICES
           </h1>
           <p className="font-eyebrow text-sm text-[#FFF6E5]/80 mt-1">
-            Authenticated as <span className="font-bold underline text-[#E8D9B0]">{studentProfile?.name || profName}</span> ({studentProfile?.rollNumber || profRoll})
+            Attendee Profile: <span className="font-bold underline text-[#E8D9B0]">{studentProfile?.name || profName}</span> ({studentProfile?.rollNumber || profRoll})
           </p>
         </div>
 
@@ -121,6 +121,18 @@ export const StudentDashboard: React.FC<Props> = ({
           >
             <Compass className="w-3.5 h-3.5" />
             <span>Notice Board</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('story')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-sans text-xs transition-all ${
+              activeTab === 'story'
+                ? 'btn-crimson-pill text-[#FFF6E5]'
+                : 'text-[#FFF6E5]/75 hover:text-[#FFF6E5]'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Discover Story</span>
           </button>
 
           <button
@@ -153,19 +165,18 @@ export const StudentDashboard: React.FC<Props> = ({
               className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1B2257]/80 text-[#E8D9B0] font-medium hover:border-[#E8D9B0]/50 transition-all border border-[#E8D9B0]/25"
               title="Open interactive campus trail road map"
             >
-              <Compass className="w-3.5 h-3.5" />
+              <Compass className="w-3.5 h-3.5 text-[#38BDF8]" />
               <span>Campus Trail ★</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* TAB 1: NOTICE BOARD (PINNED POSTERS) */}
+      {/* TAB 1: NOTICE BOARD */}
       {activeTab === 'board' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Search & Category Filter */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-            {/* Search Box */}
             <div className="relative flex-1 max-w-md">
               <Search className="w-4 h-4 text-[#E8D9B0]/60 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -177,9 +188,9 @@ export const StudentDashboard: React.FC<Props> = ({
               />
             </div>
 
-            {/* Category Pills */}
+            {/* Category Pills (all 6 categories) */}
             <div className="flex flex-wrap items-center gap-1.5">
-              {['ALL', 'Tech', 'Cultural', 'Workshop', 'Sports', 'Seminar'].map((cat) => (
+              {['ALL', 'Tech', 'Cultural', 'Sports', 'Workshop', 'Seminar', 'Club Drive'].map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategoryFilter(cat)}
@@ -196,55 +207,80 @@ export const StudentDashboard: React.FC<Props> = ({
           </div>
 
           {/* Grid of Pinned Posters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredEvents.map((ev, idx) => {
-              const userPass = myPasses.find((p) => p.eventId === ev.id);
-              const rotations = ['rotate-[-1deg]', 'rotate-[1deg]', 'rotate-0', 'rotate-[-1.5deg]'];
+          {filteredEvents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredEvents.map((ev, idx) => {
+                const userPass = myPasses.find((p) => p.eventId === ev.id);
+                const rotations = ['rotate-[-1deg]', 'rotate-[1deg]', 'rotate-0', 'rotate-[-1.5deg]'];
 
-              return (
-                <EnvelopeEventCard
-                  key={ev.id}
-                  event={ev}
-                  isRegistered={!!userPass}
-                  onOpenDetails={() => onSelectEvent(ev)}
-                  onQuickRegister={() => onQuickRegister(ev)}
-                  rotation={rotations[idx % rotations.length]}
-                  onShowToast={onShowToast}
-                />
-              );
-            })}
-          </div>
-
-          {filteredEvents.length === 0 && (
-            <div className="py-16 text-center bg-[#F3E6CE] border-2 border-[#2A1A14] rounded-3xl p-8 max-w-md mx-auto shadow-[4px_4px_0px_#2A1A14] font-typewriter">
-              <span className="text-3xl block mb-2">📌</span>
-              <h3 className="font-display font-black text-xl uppercase">No events pinned under this tag</h3>
-              <p className="text-xs opacity-75 mt-1">Try resetting the category filter or searching a different keyword.</p>
+                return (
+                  <EnvelopeEventCard
+                    key={ev.id}
+                    event={ev}
+                    isRegistered={!!userPass}
+                    onOpenDetails={() => onSelectEvent(ev)}
+                    onQuickRegister={() => onQuickRegister(ev)}
+                    rotation={rotations[idx % rotations.length]}
+                    onShowToast={onShowToast}
+                  />
+                );
+              })}
             </div>
+          ) : (
+            <EmptyNoticeState
+              title="No events found under this filter"
+              description="Try resetting your category or explore other festival horizons."
+              actionLabel="Show All Events"
+              onAction={() => {
+                setCategoryFilter('ALL');
+                setSearchQuery('');
+              }}
+            />
           )}
+
+          {/* Types of Events Showcase (PART 2.3) */}
+          <EventCategoryShowcase
+            events={events}
+            onSelectCategory={(cat) => setCategoryFilter(cat)}
+          />
         </div>
       )}
 
-      {/* TAB 2: MY PASSES WALLET */}
+      {/* TAB 2: DISCOVER STORY (PART 1.1) */}
+      {activeTab === 'story' && (
+        <div className="w-full">
+          <ScrollStory
+            events={events}
+            onSelectRole={(role) => {
+              if (role === 'trail' && onOpenTrail) {
+                onOpenTrail();
+              } else {
+                setActiveTab('board');
+              }
+            }}
+            onSelectCategory={(cat) => {
+              setCategoryFilter(cat);
+              setActiveTab('board');
+            }}
+          />
+        </div>
+      )}
+
+      {/* TAB 3: MY PASSES WALLET */}
       {activeTab === 'passes' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {myPasses.length === 0 ? (
-            <div className="py-16 text-center glass-panel rounded-3xl p-8 max-w-md mx-auto border border-[#E8D9B0]/25 font-sans">
-              <span className="text-4xl block mb-2">✧</span>
-              <h3 className="font-display font-black text-2xl uppercase text-gold-gradient">No Claimed Passes Yet</h3>
-              <p className="text-xs text-[#FFF6E5]/75 mt-1 font-eyebrow">Browse the notice board arena and claim your spot for campus events.</p>
-              <button
-                onClick={() => setActiveTab('board')}
-                className="btn-crimson-pill mt-5 px-6 py-2.5 text-xs uppercase font-semibold"
-              >
-                Browse Notice Board ★
-              </button>
-            </div>
+            <EmptyNoticeState
+              title="No claimed passes yet"
+              description="Browse the notice board arena and claim your spot for upcoming campus events."
+              actionLabel="Browse Notice Board ★"
+              onAction={() => setActiveTab('board')}
+            />
           ) : (
             <div className="space-y-8">
-              {/* Cards Grid */}
+              {/* Passes Cards Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {myPasses.map((p, idx) => {
+                {myPasses.map((p) => {
                   const isSelected = p.id === activePass?.id;
                   const ev = events.find((e) => e.id === p.eventId);
 
@@ -259,7 +295,9 @@ export const StudentDashboard: React.FC<Props> = ({
                       }`}
                     >
                       <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E8D9B0]/15 font-sans text-[10px]">
-                        <span className="font-semibold text-[#E8D9B0]">SLOT #{p.seatNo}</span>
+                        <span className="font-semibold text-[#E8D9B0]">
+                          SEAT {p.seatLabel || `#${p.seatNo}`}
+                        </span>
                         <span
                           className={`px-2 py-0.5 rounded-full font-bold uppercase flex items-center gap-1 ${
                             p.checkedIn
@@ -298,9 +336,9 @@ export const StudentDashboard: React.FC<Props> = ({
                             e.stopPropagation();
                             if (ev) onOpenFeedback(p, ev);
                           }}
-                          className="mt-2.5 w-full py-1.5 rounded-full bg-[#B3345C] text-[#FFF6E5] font-sans text-[10px] font-semibold uppercase text-center shadow-[0_0_12px_rgba(224,74,123,0.35)]"
+                          className="mt-3 w-full py-1.5 px-3 rounded-lg bg-[#E8D9B0]/15 hover:bg-[#E8D9B0]/25 text-[#E8D9B0] text-[11px] font-heading uppercase flex items-center justify-center gap-1 transition-colors"
                         >
-                          ★ SUBMIT FEEDBACK
+                          Submit Event Feedback
                         </button>
                       )}
                     </div>
@@ -308,36 +346,35 @@ export const StudentDashboard: React.FC<Props> = ({
                 })}
               </div>
 
-              {/* Full Pass View & Action Toolbar */}
+              {/* Active Selected Pass Detail & Cinema Seat Map Preview */}
               {activePass && (
-                <div className="p-6 sm:p-8 rounded-[36px] glass-panel border border-[#E8D9B0]/30 shadow-[0_16px_48px_rgba(0,0,0,0.6)] space-y-6">
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-2xl glass-panel-subtle border border-[#E8D9B0]/20 text-[#FFF6E5]">
-                    <div>
-                      <span className="font-eyebrow text-xs text-[#E8D9B0] uppercase block">
-                        Entrance Status:
-                      </span>
-                      <span className="font-display font-black text-base uppercase text-gold-gradient">
-                        {activePass.checkedIn
-                          ? 'ATTENDED • CHECKED IN AT THRESHOLD'
-                          : 'REGISTERED • READY FOR CHECK-IN DESK'}
-                      </span>
-                    </div>
-
-                    {activePass.checkedIn && activePassEvent && (
-                      <button
-                        onClick={() => onOpenFeedback(activePass, activePassEvent)}
-                        className="btn-crimson-pill flex items-center gap-1.5 px-4 py-2 text-xs uppercase"
-                      >
-                        <MessageSquarePlus className="w-3.5 h-3.5" />
-                        <span>Submit Feedback</span>
-                      </button>
-                    )}
+                <div className="space-y-8">
+                  <div className="flex flex-col items-center">
+                    <PassContainer
+                      pass={activePass}
+                      onUpdateTemplate={(tpl) => onUpdatePassTemplate(activePass.id, tpl)}
+                      onGoToWallet={() => setActiveTab('passes')}
+                    />
                   </div>
 
-                  <PassContainer
-                    pass={activePass}
-                    onUpdateTemplate={(newTpl) => onUpdatePassTemplate(activePass.id, newTpl)}
-                  />
+                  {/* Cinema Seat Map for this Event */}
+                  {activePassEvent && (
+                    <div className="pt-6 border-t border-[#E8D9B0]/20">
+                      <div className="mb-4 text-center">
+                        <span className="font-eyebrow text-xs uppercase text-[#E8D9B0] tracking-widest">
+                          Your Allocated Position
+                        </span>
+                        <h3 className="font-display font-bold text-xl text-[#FFF6E5] uppercase">
+                          Auditorium Seat Map for {activePassEvent.title}
+                        </h3>
+                      </div>
+                      <CinemaSeatMap
+                        event={activePassEvent}
+                        passes={events ? dataService.getPasses() : []}
+                        isOrganizer={false}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -345,7 +382,7 @@ export const StudentDashboard: React.FC<Props> = ({
         </div>
       )}
 
-      {/* TAB 3: STUDENT ID PROFILE & AUTOFILL */}
+      {/* TAB 4: STUDENT ID PROFILE */}
       {activeTab === 'profile' && (
         <div className="max-w-xl mx-auto glass-panel p-6 sm:p-8 rounded-3xl border border-[#E8D9B0]/25 shadow-[0_12px_40px_rgba(0,0,0,0.6)] text-[#FFF6E5]">
           <div className="flex items-center justify-between border-b border-[#E8D9B0]/20 pb-3 mb-4">
@@ -363,7 +400,7 @@ export const StudentDashboard: React.FC<Props> = ({
           </div>
 
           <p className="font-eyebrow text-xs text-[#FFF6E5]/80 mb-5">
-            These credentials autofill all your event replies so you can claim cryptographic passes in one click.
+            These credentials autofill all your event registrations so you can claim cryptographic passes in one click.
           </p>
 
           <form onSubmit={handleSaveProfile} className="space-y-4 font-sans text-xs">
@@ -448,17 +485,16 @@ export const StudentDashboard: React.FC<Props> = ({
 
             <div className="pt-4 flex items-center justify-between border-t border-[#E8D9B0]/20">
               {profileSavedToast ? (
-                <span className="text-xs font-semibold text-emerald-400">★ Profile Saved Successfully!</span>
+                <span className="text-emerald-400 font-mono text-xs flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" /> Profile Updated
+                </span>
               ) : (
-                <span className="text-[11px] text-[#FFF6E5]/60">Saved locally to this session</span>
+                <span className="text-[#FFF6E5]/60 text-[11px]">Auto-saved locally</span>
               )}
 
-              <button
-                type="submit"
-                className="btn-crimson-pill px-6 py-2.5 text-xs uppercase font-semibold"
-              >
-                Save Credentials ★
-              </button>
+              <OrnateButton type="submit" variant="primary" size="md">
+                Save Profile
+              </OrnateButton>
             </div>
           </form>
         </div>

@@ -10,6 +10,18 @@ export type EventStatus = 'OPEN' | 'FULL' | 'LIVE' | 'ENDED' | 'CLOSED';
 
 export type PassTemplateType = 'campus_id' | 'ticket_stub' | 'telegram' | 'city_poster';
 
+export interface ParticipantCharacterTraits {
+  skinTone: string;
+  hairStyle: string;
+  hairColor: string;
+  outfitColor: string;
+  accessory: string;
+  expression: string;
+  glowColor: string;
+  traitSignature: string;
+  avatarUrl?: string;
+}
+
 export interface StudentProfile {
   id: string;
   name: string;
@@ -73,6 +85,8 @@ export interface CampusPass {
   checkedIn: boolean;
   checkedInAt?: string;
   seatNo: number;
+  seatLabel?: string; // e.g. "C7"
+  characterTraits?: ParticipantCharacterTraits;
 }
 
 export interface ScanRecord {
@@ -105,4 +119,101 @@ export interface CampusFeedback {
   submittedAt: string;
 }
 
-export type ActiveRole = 'landing' | 'student' | 'organizer' | 'trail';
+// --- Volunteer Application ---
+export type VolunteerRoleType =
+  | 'registration desk'
+  | 'QR scanning'
+  | 'stage management'
+  | 'hospitality'
+  | 'photography'
+  | 'crowd control'
+  | 'tech support';
+
+export interface VolunteerApplication {
+  id: string;
+  name: string;
+  collegeEmail: string;
+  phone: string;
+  department: string;
+  year: string;
+  eventIds: string[];
+  roles: string[];
+  availability: string[];
+  tshirtSize: string;
+  pastExperience: string;
+  emergencyContact: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  assignedShifts?: string[];
+  badgeCode: string; // CF-VOL-XXXX
+  submittedAt: string;
+}
+
+// --- Stall Owner Request ---
+export type StallType =
+  | 'food'
+  | 'merchandise'
+  | 'games'
+  | 'art/craft'
+  | 'tech demo'
+  | 'NGO'
+  | 'other';
+
+export type StallSpace = 'small' | 'medium' | 'large';
+
+export interface StallRequest {
+  id: string;
+  businessName: string;
+  ownerName: string;
+  contactEmail: string;
+  contactPhone: string;
+  stallType: StallType;
+  eventId: string;
+  spaceNeeded: StallSpace;
+  powerWaterNeeds: string;
+  itemsSold: string;
+  priceRange: string;
+  licenseId: string;
+  setupTime: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  allottedPlot?: string;
+  submittedAt: string;
+}
+
+// --- Sponsor Pledge ---
+export type SponsorshipKind =
+  | 'Title'
+  | 'Gold'
+  | 'Silver'
+  | 'Bronze'
+  | 'Food & Beverage'
+  | 'Prize/Gifts'
+  | 'Venue/Equipment'
+  | 'Media/Marketing'
+  | 'Scholarship/CSR'
+  | 'In-kind';
+
+export interface SponsorPledge {
+  id: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  eventIds: string[];
+  kind: SponsorshipKind;
+  amountOrItem: string;
+  logoDataUrl?: string;
+  returnsWanted: string[]; // 'logo on pass', 'banner', 'stage mention', 'stall'
+  status: 'Pending' | 'Approved' | 'Rejected';
+  pledgedAt: string;
+}
+
+export type ActiveRole =
+  | 'gate'
+  | 'landing'
+  | 'student'
+  | 'organizer'
+  | 'trail'
+  | 'other'
+  | 'volunteer'
+  | 'stall'
+  | 'sponsor';

@@ -150,7 +150,7 @@ export const ScannerModal: React.FC<Props> = ({
           <PostageStamp price="CHECK" title="DESK" color="#8E2A2A" className="w-10 h-12" />
           <div>
             <span className="font-display font-black text-xl text-[#FFF6E5] tracking-tight uppercase block leading-none text-retro-outline-plum">
-              CAMPUS POST // CHECK-IN DESK
+              FESTORA // CHECK-IN DESK
             </span>
             <span className="font-typewriter text-[11px] text-[#F3E6CE]/80 tracking-widest uppercase">
               ENTRANCE VERIFICATION SCANNER

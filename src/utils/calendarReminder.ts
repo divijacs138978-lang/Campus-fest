@@ -1,5 +1,5 @@
 /**
- * Calendar and Reminder System for CAMPUS POST
+ * Calendar and Reminder System for FESTORA
  * Supports iCalendar (.ics) export, Google Calendar 1-click links,
  * and Web Notifications.
  */
@@ -53,11 +53,11 @@ export function downloadEventICS(event: CampusEvent): void {
   const icsContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Campus Post//College Events//EN',
+    'PRODID:-//Festora//College Events//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:campuspost-${event.id}@campuspost.edu`,
+    `UID:festora-${event.id}@festora.edu`,
     `DTSTAMP:${formatDateToICS(now)}`,
     `DTSTART:${formatDateToICS(startDate)}`,
     `DTEND:${formatDateToICS(endDate)}`,
@@ -113,7 +113,7 @@ export async function requestAndSendNotification(event: CampusEvent): Promise<bo
     }
 
     if (permission === 'granted') {
-      new Notification(`★ Campus Post: Reminder Set`, {
+      new Notification(`★ Festora: Reminder Set`, {
         body: `You will be alerted for "${event.title}" happening at ${event.venue} (${event.date} at ${event.time}).`,
         icon: '/favicon.ico',
       });

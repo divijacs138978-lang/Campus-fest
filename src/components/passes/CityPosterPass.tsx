@@ -20,7 +20,7 @@ export const CityPosterPass: React.FC<Props> = ({ pass, className = '' }) => {
         <div className="relative z-10 text-center space-y-1">
           <div className="flex items-center justify-between pb-1 border-b border-[#FFF6E5]/20">
             <span className="font-typewriter text-[10px] tracking-widest uppercase text-[#FFF6E5]/80">
-              CAMPUS POST // STORY DISPATCH
+              FESTORA // STORY DISPATCH
             </span>
             <ImportantStamp text="CONFIRMED" className="text-[9px]" />
           </div>

@@ -60,7 +60,7 @@ export const CurtainTransition: React.FC<Props> = ({
             />
 
             <span className="font-sans text-[11px] tracking-[0.3em] text-[#FFF6E5]/60 uppercase mt-4">
-              Campus Post Portal
+              Festora Portal
             </span>
           </motion.div>
         </motion.div>
